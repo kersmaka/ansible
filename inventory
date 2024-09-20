@@ -1,0 +1,9 @@
+[all]
+debian12
+almalinux
+
+[rhel_hosts]
+almalinux
+
+[debian_hosts]
+debian12
