@@ -4,6 +4,7 @@ almalinux
 
 [rhel_hosts]
 almalinux
+192.168.0.103
 
 [debian_hosts]
 debian12
