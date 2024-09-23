@@ -3,8 +3,7 @@ debian12
 almalinux
 
 [rhel_hosts]
-almalinux
-192.168.0.103
+almalinux ansible_ssh_host=192.168.0.103
 
 [debian_hosts]
 debian12
