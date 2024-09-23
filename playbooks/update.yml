@@ -1,0 +1,14 @@
+---
+- name: update and reboot
+  hosts: rhel_hosts
+  gather_facts: no
+  tasks:
+    - name: upgrade all packages
+      dnf:
+        name: '*'
+        state: latest
+
+    - name: reboot servers
+      reboot:
+        pre_reboot_delay: 05
+        msg: "!!! Ansible is rebooting this node in 05 seconds!!!"
