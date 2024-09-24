@@ -12,3 +12,17 @@
       reboot:
         pre_reboot_delay: 05
         msg: "!!! Ansible is rebooting this node in 05 seconds!!!"
+
+- name: update and reboot
+  hosts: debian_hosts
+  gather_facts: yes
+  tasks:
+    - name: upgrade all packages
+      apt:
+        name: 'update'
+        state: latest
+
+    - name: reboot servers
+      reboot:
+        pre_reboot_delay: 05
+        msg: "!!! Ansible is rebooting this node in 05 seconds!!!"
