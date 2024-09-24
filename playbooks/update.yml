@@ -18,8 +18,8 @@
   gather_facts: yes
   tasks:
     - name: upgrade all packages
-      apt:
-        name: 'update'
+      ansible.builtin.apt:
+        name: '*'
         state: latest
 
     - name: reboot servers
