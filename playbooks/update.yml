@@ -13,7 +13,7 @@
       reboot:
         pre_reboot_delay: 05
         msg: "!!! Ansible is rebooting this node in 05 seconds!!!"
-      when: not dnf_upgraded.exists
+      when: dnf_upgraded.changed = true
 
 - name: update and reboot
   hosts: debian_hosts
