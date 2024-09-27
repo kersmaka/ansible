@@ -1,32 +1,32 @@
 ---
-- name: update and reboot
+- name: update and reboot RHEL OS'
   hosts: rhel_hosts
   gather_facts: yes
   tasks:
-    - name: upgrade all packages
+    - name: update all packages
       dnf:
         name: '*'
         state: latest
-      register: dnf_upgraded
+      register: dnf_packages_updated
 
     - name: reboot servers
       reboot:
         pre_reboot_delay: 05
         msg: "!!! Ansible is rebooting this node in 05 seconds!!!"
-      when: dnf_upgraded.changed == true
+      when: dnf_packaged_updated.changed == true
 
-- name: update and reboot
+- name: update and reboot debian OS'
   hosts: debian_hosts
   gather_facts: yes
   tasks:
-    - name: upgrade all packages
+    - name: update all packages
       ansible.builtin.apt:
         name: '*'
         state: latest
-        register: result
+      register: apt_packages_updated
 
     - name: reboot servers
       reboot:
         pre_reboot_delay: 05
         msg: "!!! Ansible is rebooting this node in 05 seconds!!!"
-      when: result is changed
+      when: apt_packages_updated.changed == true
