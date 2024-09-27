@@ -7,13 +7,13 @@
       dnf:
         name: '*'
         state: latest
-        register: result
+      register: dnf_upgraded
 
     - name: reboot servers
       reboot:
         pre_reboot_delay: 05
         msg: "!!! Ansible is rebooting this node in 05 seconds!!!"
-      when: result is changed
+      when: not dnf_upgraded.stat.exists
 
 - name: update and reboot
   hosts: debian_hosts
