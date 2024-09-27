@@ -7,6 +7,7 @@
       dnf:
         name: '*'
         state: latest
+        register: result
 
     - name: reboot servers
       reboot:
@@ -22,6 +23,7 @@
       ansible.builtin.apt:
         name: '*'
         state: latest
+        register: result
 
     - name: reboot servers
       reboot:
