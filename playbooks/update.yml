@@ -12,6 +12,7 @@
       reboot:
         pre_reboot_delay: 05
         msg: "!!! Ansible is rebooting this node in 05 seconds!!!"
+      when: result is changed
 
 - name: update and reboot
   hosts: debian_hosts
@@ -26,3 +27,4 @@
       reboot:
         pre_reboot_delay: 05
         msg: "!!! Ansible is rebooting this node in 05 seconds!!!"
+      when: result is changed
