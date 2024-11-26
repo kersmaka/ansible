@@ -1,0 +1,16 @@
+---
+- name: Add admin user to sudoers
+  hosts: all
+  become: true
+    become_method: sudo
+  vars:
+    ansible_become_password: redhat
+  tasks:
+    - name: Ensure admin user is in the sudoers file
+      lineinfile:
+        path: /etc/sudoers
+        line: "{{ admin_user }} ALL=(ALL) NOPASSWD: ALL"
+        validate: '/usr/sbin/visudo -cf %s'  # Validate sudoers file syntax
+        state: present
+      vars:
+        admin_user: "admin"  # Replace with the actual username you want to add to sudoers
