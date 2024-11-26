@@ -1,0 +1,29 @@
+---
+- name: Sync /etc/hosts file to all nodes
+  hosts: all
+  become: true
+  tasks:
+    - name: Backup current /etc/hosts file (optional)
+      copy:
+        src: /etc/hosts
+        dest: /etc/hosts.bak
+        remote_src: yes
+        backup: yes
+      when: ansible_facts['distribution'] != "Ubuntu"
+
+    - name: Copy the /etc/hosts file from control node to target nodes
+      copy:
+        src: /etc/hosts
+        dest: /etc/hosts
+        owner: root
+        group: root
+        mode: '0644'
+      notify:
+        #        - restart network service (optional)
+        
+        #  handlers:
+        #    - name: restart network service (optional)
+        #      service:
+        #        name: network
+        #        state: restarted
+        #      when: ansible_facts['distribution'] == "CentOS"
