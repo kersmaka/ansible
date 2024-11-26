@@ -11,3 +11,6 @@ rocky9	ansible_ssh_host=192.168.0.141
 
 [debian_hosts]
 debian12 ansible_ssh_host=192.168.0.190
+
+[ansible-parent]
+ansible-parent ansible_ssh_host=192.168.0.120
