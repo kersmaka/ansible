@@ -1,0 +1,7 @@
+---
+- name: Check Ping on Remote Hosts
+  hosts: all
+  gather_facts: false  # We don't need facts for a simple ping check
+  tasks:
+    - name: Ping the remote host
+      ansible.builtin.ping:
