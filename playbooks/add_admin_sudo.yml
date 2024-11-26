@@ -1,15 +1,6 @@
 ---
 - name: Add admin user to sudoers
   hosts: all
-  become: true
-  become_method: sudo
-  vars:
-    ansible_become_password: redhat
-    # vars_prompt:
-    #- name: "ansible_user"
-    #  prompt: "Enter the SSH user (default is 'root')"
-    #  default: "root"
-    #  private: no
 
   tasks:
     - name: Ensure admin user is in the sudoers file
