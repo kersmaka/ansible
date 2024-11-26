@@ -1,9 +1,13 @@
 [all]
 debian12 ansibe_ssh_host=192.168.0.190
 almalinux ansible_ssh_host=192.168.0.103
+rhel9.5	ansible_ssh_host=192.168.0.121
+rocky9	ansible_ssh_host=192.168.0.141
 
 [rhel_hosts]
 almalinux ansible_ssh_host=192.168.0.103
+rhel9.5 ansible_ssh_host=192.168.0.121
+rocky9	ansible_ssh_host=192.168.0.141
 
 [debian_hosts]
 debian12 ansible_ssh_host=192.168.0.190
