@@ -19,6 +19,8 @@
 
 - name: update and reboot debian OS'
   hosts: debian_hosts
+  become: true
+  become_method: sudo
   gather_facts: yes
   tasks:
     - name: update all packages
