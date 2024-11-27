@@ -1,0 +1,11 @@
+---
+- name: Add history timestamp to /etc/profile
+  hosts: rhel_hosts
+
+  tasks:
+    - name: Adding timestamp to /etc/profile...
+      lineinfile:
+        path: /etc/profile
+        line: "export HISTTIMEFORMAT='%F %T '"
+        validate: 'sudo source /etc/profile'  # make changes effective
+        state: present
