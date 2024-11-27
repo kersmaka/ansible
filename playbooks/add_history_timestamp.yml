@@ -7,5 +7,5 @@
       lineinfile:
         path: /etc/profile
         line: "export HISTTIMEFORMAT='%F %T '"
-        validate: 'sudo source /etc/profile %s'  # make changes effective
+        validate: 'source /etc/profile %s'  # make changes effective
         state: present
