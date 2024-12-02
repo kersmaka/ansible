@@ -1,6 +1,7 @@
 ---
 - name: Add history timestamp to /etc/profile
   hosts: rhel_hosts
+  become: true
 
   tasks:
     - name: Adding timestamp to /etc/profile...
