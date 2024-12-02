@@ -10,3 +10,6 @@
         line: "export HISTTIMEFORMAT='%F %T '"
           #validate: 'source /etc/profile %s'  # make changes effective
         state: present
+  tasks:
+    - name: Make changes effective
+      shell: 'source /etc/profile %s'
