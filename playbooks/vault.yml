@@ -1,0 +1,26 @@
+#1. A token with a permissions to read the secret
+#2. The URL, including the namespace, of the secret path
+#3. The Key of the Secret for which you want to retreive the vaule for
+
+- name: Get the Krabby Patty Secret Formula From Hasicopr Vault
+  hosts: 192.168.0.121
+  vars:
+    vault_token: hvs.WXJ6K7axNbteU58cTwgAwBWZ
+  tasks:
+
+#URL module via API
+  - name: Get a Vault secret via the API
+    ansible.builtin.uri:
+      url: https://127.0.0.1:8200/v1/kv/data/secret-recipes/data/krabby-patty
+      method: GET
+      headers:
+        X-Vault-Token: "{{ vault_token }}" 
+      body: '{"data":{"key":"value"}}'
+      body_format: json
+      return_content: yes
+    register: response
+
+  - name: Display the results
+    ansible.builtin.debug:
+      msg:
+        - "Secret: {{ response.json.data.data['formula']}}"
