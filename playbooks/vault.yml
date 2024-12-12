@@ -3,7 +3,7 @@
 #3. The Key of the Secret for which you want to retreive the vaule for
 
 - name: Get the Krabby Patty Secret Formula From Hasicopr Vault
-  hosts: all
+  hosts: testing
   vars:
     vault_token: hvs.WXJ6K7axNbteU58cTwgAwBWZ
   tasks:
