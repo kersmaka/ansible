@@ -7,4 +7,4 @@ rhel95 ansible_ssh_host=192.168.0.121
 [debian_hosts]
 
 [homelab]
- homelab ansible_ssh_host=192.168.0.120
+homelab ansible_ssh_host=192.168.0.120
