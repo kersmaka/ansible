@@ -12,6 +12,7 @@
   - name: Get a Vault secret via the API
     ansible.builtin.uri:
       url: https://192.168.0.121:8200/v1/kv/data/secret-recipes/data/krabby-patty
+      validate_certs: false
       method: GET
       headers:
         X-Vault-Token: "{{ vault_token }}" 
