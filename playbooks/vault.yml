@@ -6,7 +6,7 @@
   hosts: testing
   vars:
     #vault_token: hvs.CAESIK6CenLnIOzwB9C2LLoTW_41632Asg4jXLKoalhHG-38Gh4KHGh2cy5rTnpkaXVGa2NNQmx2dGQ3SVp6b1J5S3Q
-    vaul_token: hvs.4icVDQC4UHjq3iTE0A8d52kO
+    vault_token: hvs.4icVDQC4UHjq3iTE0A8d52kO
   tasks:
 
 #URL module via API
