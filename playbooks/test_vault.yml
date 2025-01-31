@@ -2,7 +2,7 @@
 - name: Test Encrypted Password
   hosts: testing
   vars_files:
-    - /home/admin/github/ansible/playbooks/vault_password.yml
+    - vault_password.yml
   tasks:
     - name: Print the decrypted password
       debug:
