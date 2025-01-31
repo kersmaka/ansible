@@ -1,6 +1,6 @@
 ---
 - name: Test Encrypted Password
-  hosts: all
+  hosts: testing
   vars_files:
     - vault_password.yml
   tasks:
