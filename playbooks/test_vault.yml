@@ -1,0 +1,10 @@
+---
+- name: Test Encrypted Password
+  hosts: localhost
+  vars_files:
+    - vault_password.yml
+  tasks:
+    - name: Print the decrypted password
+      debug:
+        msg: "The decrypted password is {{ my_password }}"
+
