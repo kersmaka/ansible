@@ -1,13 +1,13 @@
 [all]
-rhel95 ansible_ssh_host=192.168.0.121
+rhel95 ansible_ssh_host=10.0.0.33
 
 [rhel_hosts]
-rhel95 ansible_ssh_host=192.168.0.121
+rhel95 ansible_ssh_host=10.0.0.33
 
 [testing]
-rhel95 ansible_ssh_host=192.168.0.121
+rhel95 ansible_ssh_host=10.0.0.33
 
 [debian_hosts]
 
 [homelab]
-homelab ansible_ssh_host=192.168.0.120
+homelab ansible_ssh_host=10.0.0.3
