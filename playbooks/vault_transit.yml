@@ -1,6 +1,8 @@
 ---
 - hosts: localhost
   gather_facts: false
+  vars:
+    vault_token: hvs.4icVDQC4UHjq3iTE0A8d52kO
   tasks:
     - name: Read ciphertext from file (if stored)
       slurp:
@@ -20,7 +22,7 @@
         url: "http://10.0.0.33:8200/v1/transit/decrypt/my-keys" # Replace with your Vault address
         method: POST
         headers:
-          X-Vault-Token: "{{ hvs.4icVDQC4UHjq3iTE0A8d52kO }}" # Replace with your Vault token
+          X-Vault-Token: "{{ vault_token }}" # Replace with your Vault token
         body_format: json
         body: '{"ciphertext": "{{ ciphertext }}"}'
         status_code:
