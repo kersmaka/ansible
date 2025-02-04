@@ -1,36 +1,35 @@
 ---
 - hosts: localhost
   gather_facts: false
-  vars:
-    vault_token: hvs.4icVDQC4UHjq3iTE0A8d52kO
   tasks:
-    - name: Read ciphertext from file (if stored)
+    - name: Read ciphertext from file (RECOMMENDED)
       slurp:
-        src: /home/admin/ansible/playbooks/ciphertext_file.txt  # Replace with the actual path
+        src: /path/to/your/ciphertext_file.txt  # Replace with the actual path
       register: ciphertext_file
       when: ciphertext_path is defined
 
-    - name: Set ciphertext variable (use file content or provide directly)
+    - name: Set ciphertext variable (fallback if no file)
       set_fact:
-        ciphertext: "{{ ciphertext_file.content | b64decode if ciphertext_path is defined }}"
-      #vars:
-        #ciphertext_value: "vault:v1:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" # Replace with your actual ciphertext if not using a file
-      # The when clause is not needed here because we always set the ciphertext
+        ciphertext: "{{ ciphertext_file.content | trim if ciphertext_path is defined else ciphertext_value | trim }}"
+      vars:
+        ciphertext_value: "vault:v1:mp7LII5/9/EtYigttgz1lENVUXzjhn7gGfVg3cCcBp1As9o=" # Your ciphertext here (quoted!)
+      # No when clause needed, always sets the ciphertext
 
-    - name: Decrypt burger using Vault API
+    - name: Debug Ciphertext (Check for whitespace!)
+      debug:
+        msg: "Ciphertext: |{{ ciphertext }}|"  # The pipes | | will show leading/trailing whitespace
+
+    - name: Decrypt using Vault API
       uri:
-        url: "http://10.0.0.33:8200/v1/transit/decrypt/my-keys" # Replace with your Vault address
+        url: "https://10.0.0.33:8200/v1/transit/decrypt/my-keys"
         method: POST
         headers:
-          X-Vault-Token: "{{ vault_token }}" # Replace with your Vault token
+          X-Vault-Token: "hvs.4icVDQC4UHjq3iTE0A8d52kO"
+          Content-Type: application/json
         body_format: json
         body: '{"ciphertext": "{{ ciphertext }}"}'
         status_code: [200]
       register: decryption_result
-
-    - name: Debug decryption result (for troubleshooting)
-      debug:
-        msg: "{{ decryption_result }}"
 
     - name: Base64 decode the plaintext
       set_fact:
@@ -43,5 +42,5 @@
     - name: (Optional) Write the burger to a file
       copy:
         content: "{{ burger }}"
-        dest: /home/admin/ansible/playbooks/burger.txt  # Replace with the desired path
+        dest: /path/to/your/burger.txt
         mode: 0600
