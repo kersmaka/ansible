@@ -12,7 +12,7 @@
       set_fact:
         ciphertext: "{{ ciphertext_file.content | trim if ciphertext_path is defined else ciphertext_value | trim }}"
       vars:
-        ciphertext_value: "vault:v1:+BlvasLFq3YTV3hpIAeEndsEO33kBM1PKZDFVZ2w2lSqYeaTxQ==" # Your ciphertext here (quoted!)
+        ciphertext_value: "vault:v1:OKQC5B33cnuz8SjDMqwvSjMegOXcM4yKXXfAyPZnQ34GiLk=" # Your ciphertext here (quoted!)
       # No when clause needed, always sets the ciphertext
 
     - name: Debug Ciphertext (Check for whitespace!)
