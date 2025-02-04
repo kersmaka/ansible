@@ -43,5 +43,5 @@
     - name: (Optional) Write the burger to a file
       copy:
         content: "{{ burger }}"
-        dest: /path/to/your/burger.txt
+        dest: /home/admin/ansible/playbooks/burger.txt
         mode: 0600
