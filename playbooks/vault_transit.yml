@@ -25,7 +25,7 @@
           X-Vault-Token: "{{ vault_token }}" # Replace with your Vault token
         body_format: json
         body: '{"ciphertext": "{{ ciphertext }}"}'
-        status_code:
+        status_code: [200]
       register: decryption_result
 
     - name: Debug decryption result (for troubleshooting)
