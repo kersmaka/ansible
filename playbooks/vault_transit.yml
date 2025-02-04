@@ -21,6 +21,7 @@
 
     - name: Decrypt using Vault API
       uri:
+        validate_certs: false
         url: "https://10.0.0.33:8200/v1/transit/decrypt/my-keys"
         method: POST
         headers:
