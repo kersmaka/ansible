@@ -1,0 +1,45 @@
+---
+- hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Read ciphertext from file (if stored)
+      slurp:
+        src: /home/admin/ansible/playbooks/ciphertext_file.txt  # Replace with the actual path
+      register: ciphertext_file
+      when: ciphertext_path is defined
+
+    - name: Set ciphertext variable (use file content or provide directly)
+      set_fact:
+        ciphertext: "{{ ciphertext_file.content | b64decode if ciphertext_path is defined else ciphertext_value }}"
+      #vars:
+        #ciphertext_value: "vault:v1:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" # Replace with your actual ciphertext if not using a file
+      # The when clause is not needed here because we always set the ciphertext
+
+    - name: Decrypt burger using Vault API
+      uri:
+        url: "http://10.0.0.33:8200/v1/transit/decrypt/my-keys" # Replace with your Vault address
+        method: POST
+        headers:
+          X-Vault-Token: "{{ hvs.4icVDQC4UHjq3iTE0A8d52kO }}" # Replace with your Vault token
+        body_format: json
+        body: '{"ciphertext": "{{ ciphertext }}"}'
+        status_code:
+      register: decryption_result
+
+    - name: Debug decryption result (for troubleshooting)
+      debug:
+        msg: "{{ decryption_result }}"
+
+    - name: Base64 decode the plaintext
+      set_fact:
+        burger: "{{ decryption_result.json.data.plaintext | b64decode }}"
+
+    - name: Display the burger
+      debug:
+        msg: "Your burger: {{ burger }}"
+
+    - name: (Optional) Write the burger to a file
+      copy:
+        content: "{{ burger }}"
+        dest: /home/admin/ansible/playbooks/burger.txt  # Replace with the desired path
+        mode: 0600
