@@ -10,9 +10,9 @@
       register: ciphertext_file
       when: ciphertext_path is defined
 
-    #- name: Set ciphertext variable (use file content or provide directly)
-      #set_fact:
-        #ciphertext: "{{ ciphertext_file.content | b64decode if ciphertext_path is defined else ciphertext_value }}"
+    - name: Set ciphertext variable (use file content or provide directly)
+      set_fact:
+        ciphertext: "{{ ciphertext_file.content | b64decode if ciphertext_path is defined else ciphertext_value }}"
       #vars:
         #ciphertext_value: "vault:v1:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" # Replace with your actual ciphertext if not using a file
       # The when clause is not needed here because we always set the ciphertext
