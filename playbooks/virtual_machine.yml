@@ -12,11 +12,17 @@
     disk_size: 20G       # Size of the new disk (e.g., 10G, 50G)
     disk_format: qcow2   # Format of the new disk (e.g., qcow2, raw)
     disk_path: /home/images/"{{ vm_name }}".qcow2 # Where to create the new disk
+    network:
+      - bridge: br0
 
 
   tasks:
+    - name: Ensure community.libvirt collection is installed
+      community.general.ansible.collections.install_collection:
+        name: community.libvirt
+
     - name: Check if VM already exists
-      virt:
+      community.libvirt.virt:
         name: "{{ vm_name }}"
       register: vm_exists
 
