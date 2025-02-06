@@ -17,12 +17,8 @@
 
 
   tasks:
-    - name: Ensure community.libvirt collection is installed
-      community.general.ansible.collections.install_collection:
-        name: community.libvirt
-
     - name: Check if VM already exists
-      community.libvirt.virt:
+      community.libvirt:
         name: "{{ vm_name }}"
       register: vm_exists
 
