@@ -4,7 +4,7 @@ rhel95 ansible_ssh_host=10.0.0.33
 [rhel_hosts]
 rhel95 ansible_ssh_host=10.0.0.33
 
-[testing]
+[rhel95]
 rhel95 ansible_ssh_host=10.0.0.33
 
 [debian_hosts]
