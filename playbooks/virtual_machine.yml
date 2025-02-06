@@ -1,0 +1,73 @@
+---
+- hosts: localhost
+  connection: local
+  become: true  # Necessary for virt commands
+
+  vars:
+    vm_name: "{{ vm_name }}"  # Name of your virtual machine
+    memory: 4096        # Memory in MB
+    vcpus: 4            # Number of virtual CPUs
+    #disk_image: /path/to/your/disk.img # Path to your disk image (e.g., a qcow2 file)
+    # OR, if you want to create a new disk:
+    disk_size: 20G       # Size of the new disk (e.g., 10G, 50G)
+    disk_format: qcow2   # Format of the new disk (e.g., qcow2, raw)
+    disk_path: /home/images/"{{ vm_name }}".qcow2 # Where to create the new disk
+
+
+  tasks:
+    - name: Check if VM already exists
+      virt:
+        name: "{{ vm_name }}"
+      register: vm_exists
+
+    - name: Create disk image if it doesn't exist (only if disk_size is defined)
+      when: disk_size is defined
+      block:
+        - name: Create disk directory if it doesn't exist
+          file:
+            path: "{{ disk_path | dirname }}"
+            state: directory
+            mode: 0755
+        - name: Create new disk image
+          command: qemu-img create -f "{{ disk_format }}" "{{ disk_path }}" "{{ disk_size }}"
+          args:
+            creates: "{{ disk_path }}"  # Only create if it doesn't exist
+          register: disk_created
+
+    - name: Define and start the VM
+      virt:
+        name: "{{ vm_name }}"
+        memory: "{{ memory }}"
+        vcpus: "{{ vcpus }}"
+        disk:
+          - name: vda # you can give a name to your disk
+            path: "{{ disk_path if disk_size is defined else disk_image }}" # Use the correct path based on whether a new disk was created
+            format: "{{ disk_format if disk_size is defined else (disk_image | regex_search('\\.([^.]+)$') | first) }}" # Infer format if not creating
+        state: running # Or "present" if you only want to define it, not start it immediately.
+        # Other virt options can be added here, like cdrom, network, graphics, etc.
+        # Example for network (bridged):
+        # network:
+        #   - bridge: br0
+      register: vm_result
+
+    - name: Display VM creation/start result
+      debug:
+        msg: "{{ vm_result }}"
+
+    - name: Wait for the VM to become reachable (optional, adjust timeout as needed)
+      wait_for_connection:
+        timeout: 600 # 10 minutes
+
+    - name: Run commands inside the VM (example)
+      delegate_to: "{{ vm_name }}" # Connects to the VM (requires proper configuration, see below)
+      run_once: true # Only run on one host
+      connection: local # Important! delegate_to uses local connection
+      # You'll need to configure SSH access to the VM (e.g., using cloud-init or similar).
+      # Example: Install some packages
+      # apt:
+      #   pkg:
+      #     - nginx
+      #     - php
+      #   state: present
+      #   update_cache: yes
+      # when: vm_result.changed # Only run these if the VM was newly created
