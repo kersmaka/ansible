@@ -1,6 +1,6 @@
 ---
-- hosts: localhost
-  connection: local
+- hosts: rhel95
+  #connection: local
   become: true  # Necessary for virt commands
 
   vars:
