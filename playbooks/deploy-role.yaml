@@ -5,9 +5,9 @@
   gather_facts: false
   tasks:
 
-  - name: Wait for ready hosts
-    ansible.builtin.wait_for_connection:
-      timeout: 300
+  #- name: Wait for ready hosts
+  #  ansible.builtin.wait_for_connection:
+  #    timeout: 300
   
 - hosts: "{{ target }}"
   become: true
