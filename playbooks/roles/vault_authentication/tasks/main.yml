@@ -1,4 +1,3 @@
----
 - name: Get the Krabby Patty Secret Formula From Hasicopr Vault
   vars:
     #vault_token: hvs.CAESIK6CenLnIOzwB9C2LLoTW_41632Asg4jXLKoalhHG-38Gh4KHGh2cy5rTnpkaXVGa2NNQmx2dGQ3SVp6b1J5S3Q
