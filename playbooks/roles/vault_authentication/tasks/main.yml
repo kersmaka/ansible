@@ -1,26 +1,24 @@
-- name: Get the Krabby Patty Secret Formula From Hasicopr Vault
-  vars:
-    #vault_token: hvs.CAESIK6CenLnIOzwB9C2LLoTW_41632Asg4jXLKoalhHG-38Gh4KHGh2cy5rTnpkaXVGa2NNQmx2dGQ3SVp6b1J5S3Q
-    vault_token: hvs.4icVDQC4UHjq3iTE0A8d52kO
-  tasks:
+- name: Get the Krabby Patty Secret Formula From Hasicorp Vault
+  vars:  # vars is at the role level, BEFORE tasks
+    vault_token: hvs.4icVDQC4UHjq3iTE0A8d52kO  # Your token
+  tasks:  # Tasks section starts here
 
-#URL module via API
-  - name: Get a Vault secret via the API
-    ansible.builtin.uri:
-      url: https://10.0.0.33:8200/v1/secret-recipes/data/krabby-patty
-      validate_certs: false
-      method: GET
-      headers:
-        X-Vault-Token: "{{ vault_token }}" 
-      body: '{"data":{"key":"value"}}'
-      body_format: json
-      return_content: yes
-    register: response
-  
-  - name: Display the results
-    ansible.builtin.set_fact:
-      kerberos_password: "{{ response.json.data.data['formula']}}"
+    - name: Get a Vault secret via the API
+      ansible.builtin.uri:
+        url: "https://10.0.0.33:8200/v1/secret-recipes/data/krabby-patty"
+        validate_certs: false  # In production, use proper certificate validation
+        method: GET
+        headers:
+          X-Vault-Token: "{{ vault_token }}"
+        # body: '{"data":{"key":"value"}}'  # GET request should not have a body
+        # body_format: json  # No body
+        return_content: yes
+      register: response
 
-  - name: Display the results (optional)
-    ansible.builtin.debug:
-      msg: "Kerberos Password: {{ kerberos_password }}"    
+    - name: Set kerberos_password fact
+      ansible.builtin.set_fact:
+        kerberos_password: "{{ response.json.data.data.formula }}"
+
+    - name: Display the results (optional)
+      ansible.builtin.debug:
+        msg: "Kerberos Password: {{ kerberos_password }}"
