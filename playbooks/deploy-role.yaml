@@ -1,0 +1,23 @@
+# Deploy specified role to target node(s)
+
+- hosts: "{{ target }}"
+  become: true
+  gather_facts: false
+  tasks:
+
+  - name: Wait for ready hosts
+    ansible.builtin.wait_for_connection:
+      timeout: 300
+  
+- hosts: "{{ target }}"
+  become: true
+  gather_facts: true
+
+  tasks:
+
+    - name: Deploy {{primary_role}}
+      include_role:
+        name: "{{ item }}"
+      loop:
+        - "{{ primary_role }}"
+
