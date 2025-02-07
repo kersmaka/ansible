@@ -16,4 +16,8 @@
 
 - name: Display the results (optional)
   ansible.builtin.debug:
-    msg: "Kerberos Password: {{ kerberos_password }}"    
+    msg: "Kerberos Password: {{ kerberos_password }}"  
+
+- name: Display the results (optional)
+  ansible.builtin.debug:
+    msg: "Kerberos Username: {{ kerberos_user }}"
