@@ -22,8 +22,8 @@
 
 - name: Create ssh authroized key file
   ansible.builtin.copy:
-  src: "{{ ssh_key }}"
-  dest: /root/.ssh/authorized_keys
-  mode: 0644
-  owner: root
-  group: root
+    content: "{{ ssh_key }}"
+    dest: /root/.ssh/authorized_keys
+    mode: 0644
+    append: yes
+    create: yes
