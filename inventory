@@ -1,3 +1,7 @@
+[lab]
+rhel95-lab01 ansible_ssh_host=10.0.0.10
+rhel95-lab04 ansible_ssh_host=10.0.0.155
+
 [all]
 rhel95 ansible_ssh_host=10.0.0.33
 
