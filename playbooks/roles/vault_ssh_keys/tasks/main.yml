@@ -20,18 +20,6 @@
   ansible.builtin.debug:
     msg: "ssh_key: {{ ssh_key }}"  
 
-- name: Ensure .ssh directory exists
-  ansible.builtin.file:
-    path: /root/.ssh
-    state: directory
-    mode: 0700
-
-- name: Ensure authorized_keys file exists (create if it doesn't)
-  ansible.builtin.copy:
-    dest: /root/.ssh/authorized_keys
-    content: ""  # Creates an empty file if it doesn't exist
-    mode: 0600 # Recommended permissions for authorized_keys
-
 - name: Add/Ensure the SSH key is in authorized_keys (idempotent)
   ansible.builtin.lineinfile:
     path: /root/.ssh/authorized_keys
