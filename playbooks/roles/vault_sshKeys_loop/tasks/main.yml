@@ -1,2 +1,52 @@
 ---
-# tasks file for vault_sshKeys_loop
+- name: List Vault secrets (KV v2)
+  uri:
+    url: "https://10.0.0.33:8200/v1/ssh_keys/metadata"
+    method: LIST
+    headers:
+      X-Vault-Token: "hvs.4icVDQC4UHjq3iTE0A8d52kO"
+    validate_certs: false  # Use with caution in production!
+    return_content: yes
+  register: vault_list_result
+  vars:
+    _keys: "{{ vault_list_result.json.data.keys | default([]) }}" # Handle if keys is missing
+
+- name: Debug keys (optional)
+  debug:
+    msg: "Keys found: {{ _keys }}"
+
+- name: Retrieve each secret (KV v2)
+  uri:
+    url: "https://10.0.0.33:8200/v1/ssh_keys/data/{{ item }}"
+    method: GET
+    headers:
+      X-Vault-Token: "hvs.4icVDQC4UHjq3iTE0A8d52kO"
+    validate_certs: false  # Use with caution in production!
+    return_content: yes
+  register: vault_secret_result
+  loop: "{{ _keys }}"
+  loop_control:
+    loop_var: item
+  vars:
+    _secret: "{{ vault_secret_result.json.data.data | default('') }}" # Handle if data is missing
+
+- name: Display secrets
+  debug:
+    msg: "Secret: {{ item }}\n{{ _secret }}\n--------------------"
+  loop: "{{ _keys }}"
+  loop_control:
+    loop_var: item
+  when: _secret != ""  # Only display if secret was retrieved
+
+- name: Handle empty keys
+  debug:
+    msg: "No keys found. Check path and permissions. Are you using KV v2?"
+  when: _keys | length == 0
+
+- name: Handle secret retrieve failure
+  debug:
+    msg: "Error retrieving secret: {{ item }}. Check permissions or if the secret exists."
+  loop: "{{ _keys }}"
+  loop_control:
+    loop_var: item
+  when: vault_secret_result.json.data.data is not defined and _keys | length > 0
