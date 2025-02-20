@@ -10,11 +10,7 @@
   register: vault_list_result
   vars:
     _keys: "{{ vault_list_result.json.data.keys | default([]) }}" # Handle if keys is missing
-
-- name: Debug keys (optional)
-  debug:
-    msg: "Keys found: {{ _keys }}"
-
+    
 - name: Retrieve each secret (KV v2)
   uri:
     url: "https://10.0.0.33:8200/v1/ssh_keys/data/{{ item }}"
