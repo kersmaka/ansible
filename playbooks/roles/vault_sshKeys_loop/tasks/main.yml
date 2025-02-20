@@ -9,8 +9,8 @@
     return_content: yes
   register: vault_result
 
-- name: Set facts for each key/value pair with prefix
+- name: Set facts for each key/value pair
   set_fact:
-    "vault_{{ item.key | regex_replace('-', '_') }}": "{{ item.value }}"
-  loop: "{{ vault_result.json.data.data | dict2items }}"
+    "{{ item.key }}": "{{ item.value }}"  # Dynamic variable name
+  loop: "{{ vault_result.json.data.data | dict2items }}"  # Iterate through key/value pairs
   when: vault_result is defined and vault_result.json.data.data is defined
