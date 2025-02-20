@@ -37,14 +37,3 @@
   debug:
     msg: "Value for rhel95-lab07: {{ vault_rhel95_lab07 }}"
   when: vault_rhel95_lab07 is defined
-
-# Example of using the variables in a template (if needed)
-- name: Create a file with the secrets (example)
-  template:
-    src: secrets.j2  # Create this Jinja2 template file
-    dest: /tmp/secrets.txt
-  vars:
-    rhel95_lab04_secret: "{{ vault_rhel95_lab04 | default('Not Found') }}"
-    rhel95_lab06_secret: "{{ vault_rhel95_lab06 | default('Not Found') }}"
-    rhel95_lab07_secret: "{{ vault_rhel95_lab07 | default('Not Found') }}"
-  when: vault_rhel95_lab04 is defined and vault_rhel95_lab06 is defined and vault_rhel95_lab07 is defined
