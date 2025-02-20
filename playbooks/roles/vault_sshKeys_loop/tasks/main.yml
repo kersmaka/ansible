@@ -1,48 +1,39 @@
 ---
-- name: List Vault secrets (KV v2)
+- name: Get Vault secret data
   uri:
-    url: "https://10.0.0.33:8200/v1/ssh_keys/metadata"
-    method: LIST
-    headers:
-      X-Vault-Token: "hvs.4icVDQC4UHjq3iTE0A8d52kO"
-    validate_certs: false  # Use with caution in production!
-    return_content: yes
-  register: vault_list_result
-  vars:
-    _keys: "{{ vault_list_result.json.data.keys | default([]) }}" # Handle if keys is missing
-
-- name: Retrieve each secret (KV v2)
-  uri:
-    url: "https://10.0.0.33:8200/v1/ssh_keys/data/{{ item }}"
+    url: "https://10.0.0.33:8200/v1/ssh_keys/data/lab04"
     method: GET
     headers:
       X-Vault-Token: "hvs.4icVDQC4UHjq3iTE0A8d52kO"
-    validate_certs: false  # Use with caution in production!
+    validate_certs: false
     return_content: yes
-  register: vault_secret_result
-  loop: "{{ _keys }}"
-  loop_control:
-    loop_var: item
-  vars:
-    _secret: "{{ vault_secret_result.json.data.data | default('') }}" # Handle if data is missing
+  register: vault_result
 
-- name: Display secrets
-  debug:
-    msg: "Secret: {{ item }}\n{{ _secret }}\n--------------------"
-  loop: "{{ _keys }}"
-  loop_control:
-    loop_var: item
-  when: _secret != ""  # Only display if secret was retrieved
+- name: Set facts for each key/value pair
+  set_fact:
+    "{{ item.key }}": "{{ item.value }}"  # Dynamic variable name
+  loop: "{{ vault_result.json.data.data | dict2items }}"  # Iterate through key/value pairs
+  when: vault_result is defined and vault_result.json.data.data is defined
 
-- name: Handle empty keys
-  debug:
-    msg: "No keys found. Check path and permissions. Are you using KV v2?"
-  when: _keys | length == 0
+- debug:
+    msg: "rhel95-lab04: {{ rhel95-lab04 | default('Not Found') }}" #Example of accessing the dynamically created variables
+- debug:
+    msg: "rhel95-lab06: {{ rhel95-lab06 | default('Not Found') }}"
+- debug:
+    msg: "rhel95-lab07: {{ rhel95-lab07 | default('Not Found') }}"
 
-- name: Handle secret retrieve failure
+# Example of using the dynamically created variables in a subsequent task
+- name: Use the variables (example)
   debug:
-    msg: "Error retrieving secret: {{ item }}. Check permissions or if the secret exists."
-  loop: "{{ _keys }}"
-  loop_control:
-    loop_var: item
-  when: vault_secret_result.json.data.data is not defined and _keys | length > 0
+    msg: "SSH Key for rhel95-lab04: {{ rhel95-lab04 }}"
+  when: rhel95-lab04 is defined
+
+- name: Use the variables (example)
+  debug:
+    msg: "Value for rhel95-lab06: {{ rhel95-lab06 }}"
+  when: rhel95-lab06 is defined
+
+- name: Use the variables (example)
+  debug:
+    msg: "Value for rhel95-lab07: {{ rhel95-lab07 }}"
+  when: rhel95-lab07 is defined
