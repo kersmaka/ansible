@@ -11,10 +11,10 @@
 
 - name: Set facts for each key/value pair
   set_fact:
-    "vault_{{ item.key | regex_replace('[-.]', '_') }}": "{{ item.value }}"  # Replace hyphens and periods with underscores, add prefix
+    "{{ item.key | regex_replace('[-.]', '_') }}": "{{ item.value }}"  # Replace hyphens and periods with underscores, add prefix
   loop: "{{ vault_result.json.data.data | dict2items }}"  # Iterate through key/value pairs
   when: vault_result is defined and vault_result.json.data.data is defined
 
 - name: Display the results (optional)
   ansible.builtin.debug:
-    msg: "ssh_key: {{ vault_rhel95.lab04 }}"  
+    msg: "ssh_key: {{ rhel95.lab04 }}"  
