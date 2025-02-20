@@ -17,4 +17,4 @@
 
 - name: Display the results (optional)
   ansible.builtin.debug:
-    msg: "ssh_key: {{ rhel95.lab04 }}"  
+    msg: "ssh_key: {{ vault_rhel95.lab04 }}"  
