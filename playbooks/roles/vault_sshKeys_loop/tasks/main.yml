@@ -1,4 +1,8 @@
 ---
+- name: Retrieve and display Vault secrets
+  vars:
+    _keys: []  # Initialize _keys at the play level
+
 - name: List Vault secrets (KV v2)
   uri:
     url: "https://10.0.0.33:8200/v1/ssh_keys/metadata"
@@ -10,7 +14,7 @@
   register: vault_list_result
   vars:
     _keys: "{{ vault_list_result.json.data.keys | default([]) }}" # Handle if keys is missing
-    
+
 - name: Retrieve each secret (KV v2)
   uri:
     url: "https://10.0.0.33:8200/v1/ssh_keys/data/{{ item }}"
