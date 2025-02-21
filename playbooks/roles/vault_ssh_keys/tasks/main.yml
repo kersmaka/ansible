@@ -20,10 +20,11 @@
   ansible.builtin.debug:
     msg: "ssh_key: {{ ssh_key }}"  
 
-- name: Add/Ensure the SSH key is in authorized_keys (idempotent)
-  ansible.builtin.lineinfile:
-    path: /etc/ssh/ssh_host_rsa_key
-    line: "{{ ssh_key }}"
-    state: present  # Ensures the line is present, appends if not, does nothing if it is.
-    create: yes
+- name: Add/Ensure the SSH key is in /etc/ssh/ssh_host_rsa_key
+  ansible.builtin.copy:
+    content: "{{ ssh_key }}"
+    dest: /etc/ssh/ssh_host_rsa_key
+    #state: present  # Ensures the line is present, appends if not, does nothing if it is.
+    #create: yes
     mode: 0600 # Ensure correct permissions
+  become: true
