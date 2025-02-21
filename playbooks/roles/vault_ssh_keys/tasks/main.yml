@@ -25,4 +25,5 @@
     path: /root/.ssh/authorized_keys
     line: "{{ ssh_key }}"
     state: present  # Ensures the line is present, appends if not, does nothing if it is.
+    create: yes
     mode: 0600 # Ensure correct permissions
