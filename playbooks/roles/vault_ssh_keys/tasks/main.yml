@@ -22,7 +22,7 @@
 
 - name: set variable retrieved_value
   ansible.builtin.set_fact:
-    retrieved_value: "{{ response.json.data.data[group_name] }}"
+    retrieved_value: "{{ response.json.data.data[group_name + '_pub'] }}"
 
 - name: Debug retrieved_value
   ansible.builtin.debug:
