@@ -14,15 +14,15 @@
 
 - name: set variable retrieved_value
   ansible.builtin.set_fact:
-    retrieved_value: "{{ response.json.data.data[group_name + '_pub'] }}"
+    group_name: "{{ response.json.data.data[group_name + '_pub'] }}"
 
 - name: Debug retrieved_value
   ansible.builtin.debug:
-    msg: "retrieved_value: {{ retrieved_value }}"
+    msg: "retrieved_value: {{ group_name }}"
 
 - name: Add/Ensure the SSH key is in /etc/ssh/ssh_host_rsa_key
   ansible.builtin.copy:
-    content: "{{ retrieved_value }}"
+    content: "{{ group_name }}"
     dest: /etc/ssh/ssh_host_rsa_key
     mode: 0600 # Ensure correct permissions
   become: true
