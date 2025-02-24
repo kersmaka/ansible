@@ -12,14 +12,6 @@
     return_content: yes
   register: response
 
-- name: Debug response.json.data.data
-  ansible.builtin.debug:
-    var: response.json.data.data
-
-- name: Debug group_name
-  ansible.builtin.debug:
-    msg: "group_name: {{ group_name }}"
-
 - name: set variable retrieved_value
   ansible.builtin.set_fact:
     retrieved_value: "{{ response.json.data.data[group_name + '_pub'] }}"
@@ -27,14 +19,6 @@
 - name: Debug retrieved_value
   ansible.builtin.debug:
     msg: "retrieved_value: {{ retrieved_value }}"
-
-- name: Create new variable with appended _pub
-  ansible.builtin.set_fact:
-    "{{ group_name }}_pub": "{{ retrieved_value }}"
-
-- name: Display new group variable name
-  ansible.builtin.debug:
-    msg: "group name: {{ lookup('vars', group_name + '_pub') }}"
 
 - name: Add/Ensure the SSH key is in /etc/ssh/ssh_host_rsa_key
   ansible.builtin.copy:
