@@ -22,7 +22,7 @@
 
 - name: Create new variable with appended _pub
   set_fact:
-    group_name_pub: "{{ [group_name + '_pub'] }}"
+    group_name_pub: "{{ group_name }} + '_pub'"
 
 - name: Display new group variable name
   ansible.builtin.debug:
