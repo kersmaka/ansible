@@ -20,6 +20,10 @@
   ansible.builtin.debug:
     msg: "ssh_key: {{ ssh_key }}"  
 
+- name: Display group variable name
+  ansible.builtin.debug:
+    msg: "group name: {{ group_name }}"      
+
 - name: Add/Ensure the SSH key is in /etc/ssh/ssh_host_rsa_key
   ansible.builtin.copy:
     content: "{{ ssh_key }}"
