@@ -14,7 +14,7 @@
   
 - name: set variable ssh_key
   ansible.builtin.set_fact:
-    ssh_key: "{{ response.json.data.data[rhel95]}}"
+    group_name: "{{ response.json.data.data[group_name]}}"
 
 - name: Display the results (optional)
   ansible.builtin.debug:
