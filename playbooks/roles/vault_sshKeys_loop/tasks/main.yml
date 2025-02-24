@@ -21,8 +21,8 @@
 
 - name: assign value to rhel95
   ansible.builtin.set_fact:
-    group_var: "{{ vault_result.json.data.data[group_name] }}"
+    group_name: "{{ vault_result.json.data.data[group_name] }}"
 
 - name: Display group variable name
   ansible.builtin.debug:
-    msg: "group name: {{ group_var }}"   
+    msg: "group name: {{ group_name }}"   
