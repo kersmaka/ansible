@@ -24,9 +24,13 @@
   set_fact:
     "{{ group_name }}_pub": "{{ lookup('vars', group_name) }}"
 
-- name: Display new group variable name
-  ansible.builtin.debug:
-    msg: "group name: {{ group_name_pub }}"       
+- name: Use the new variable
+  debug:
+    msg: "The value of {{ group_name }}_pub is: {{ lookup('vars', group_name + '_pub') }}"
+
+- name: use the old variable.
+  debug:
+    msg: "The value of group_name is: {{ group_name }}"  
 
 - name: Add/Ensure the SSH key is in /etc/ssh/ssh_host_rsa_key
   ansible.builtin.copy:
