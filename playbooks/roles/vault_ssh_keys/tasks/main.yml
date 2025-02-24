@@ -22,7 +22,7 @@
 
 - name: Add/Ensure the SSH key is in /etc/ssh/ssh_host_rsa_key
   ansible.builtin.copy:
-    content: "{{ group_name }}_pub"
+    content: "{{ group_name }} + 'pub'"
     dest: /etc/ssh/ssh_host_rsa_key
     #state: present  # Ensures the line is present, appends if not, does nothing if it is.
     #create: yes
