@@ -28,7 +28,7 @@
   ansible.builtin.set_fact:
     #group_var: "{{ response.json.data.data[{{ group_name }}]}}"      
     group_var: group_name
-    group_var2: "{{ response.json.data.data['group_var'] }}"
+    group_var2: "{{ response.json.data.data {{ group_var }} }}"
 
 - name: Display group variable name
   ansible.builtin.debug:
