@@ -18,3 +18,11 @@
 - name: Display the results (optional)
   ansible.builtin.debug:
     msg: "ssh_key: {{ rhel95_lab04 }}"  
+
+- name: assign value to rhel95
+  ansible.builtin.set_fact:
+    group_var: "{{ response.json.data.data[group_name] }}"
+
+- name: Display group variable name
+  ansible.builtin.debug:
+    msg: "group name: {{ group_var }}"   
