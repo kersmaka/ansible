@@ -24,10 +24,6 @@
   set_fact:
     "{{ group_name }}_pub": "{{ retrieved_value }}"
 
-- name: Display new retrieved value
-  ansible.builtin.debug:
-    msg: "retrieved value: {{ group_name_pub }}"    
-
 - name: Display new group variable name
   ansible.builtin.debug:
     msg: "group name: {{ lookup('vars', group_name + '_pub') }}"
