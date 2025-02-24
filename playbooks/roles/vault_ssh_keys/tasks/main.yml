@@ -20,9 +20,9 @@
   ansible.builtin.debug:
     msg: "group name: {{ group_name }}"   
 
-- name: Create new variable with appended _pub
+- name: Create new variable with appended _pub to the variable name
   set_fact:
-    group_name_pub: "{{ group_name ~ '_pub'}}"
+    "{{ group_name }}_pub": "{{ lookup('vars', group_name) }}"
 
 - name: Display new group variable name
   ansible.builtin.debug:
