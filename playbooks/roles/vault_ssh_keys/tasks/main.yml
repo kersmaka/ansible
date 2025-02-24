@@ -27,12 +27,11 @@
 - name: Display the results
   ansible.builtin.set_fact:
     #group_var: "{{ response.json.data.data[{{ group_name }}]}}"      
-    group_var: group_name
-    group_var2: "{{ response.json.data.data + [group_var]}}"
+    group_var: "{{ response.json.data.data['group_name']}}"
 
 - name: Display group variable name
   ansible.builtin.debug:
-    msg: "group name: {{ group_var2 }}"      
+    msg: "group name: {{ group_var }}"      
 
 - name: Add/Ensure the SSH key is in /etc/ssh/ssh_host_rsa_key
   ansible.builtin.copy:
