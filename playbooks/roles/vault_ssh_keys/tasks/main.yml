@@ -12,30 +12,17 @@
     return_content: yes
   register: response
   
-- name: set variable ssh_key
+- name: set variable group_name
   ansible.builtin.set_fact:
     group_name: "{{ response.json.data.data[group_name]}}"
 
-- name: Display the results (optional)
-  ansible.builtin.debug:
-    msg: "group_name: {{ group_name }}"  
-
 - name: Display group variable name
   ansible.builtin.debug:
-    msg: "group name: {{ group_name }}"  
-
-- name: Display the results
-  ansible.builtin.set_fact:
-    #group_var: "{{ response.json.data.data[{{ group_name }}]}}"      
-    group_var: "{{ response.json.data.data[group_name] }}"
-
-- name: Display group variable name
-  ansible.builtin.debug:
-    msg: "group name: {{ group_var }}"      
+    msg: "group name: {{ group_name }}"   
 
 - name: Add/Ensure the SSH key is in /etc/ssh/ssh_host_rsa_key
   ansible.builtin.copy:
-    content: "{{ ssh_key }}"
+    content: "{{ group_name }}"
     dest: /etc/ssh/ssh_host_rsa_key
     #state: present  # Ensures the line is present, appends if not, does nothing if it is.
     #create: yes
