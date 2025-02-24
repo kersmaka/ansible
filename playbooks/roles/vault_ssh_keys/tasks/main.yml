@@ -6,37 +6,31 @@
     validate_certs: false
     method: GET
     headers:
-      X-Vault-Token: "{{ vault_token }}" 
+      X-Vault-Token: "{{ vault_token }}"
     body: '{"data":{"key":"value"}}'
     body_format: json
     return_content: yes
   register: response
-  
-- name: set variable group_name
+
+- name: set variable retrieved_value
   ansible.builtin.set_fact:
-    group_name: "{{ response.json.data.data[group_name]}}"
+    retrieved_value: "{{ response.json.data.data[group_name] }}"
 
-- name: Display group variable name
+- name: Display retrieved value
   ansible.builtin.debug:
-    msg: "group name: {{ group_name }}"   
-
-- name: set variable
-  set_fact:
-    item2: _pub
+    msg: "retrieved value: {{ retrieved_value }}"
 
 - name: Create new variable with appended _pub
   set_fact:
-    "{{ group_name }}_pub": "{{ lookup('vars', group_name) }}"
+    "{{ group_name }}_pub": "{{ retrieved_value }}"
 
 - name: Display new group variable name
   ansible.builtin.debug:
-    msg: "group name: {{ group_name_pub }}"       
+    msg: "group name: {{ lookup('vars', group_name + '_pub') }}"
 
 - name: Add/Ensure the SSH key is in /etc/ssh/ssh_host_rsa_key
   ansible.builtin.copy:
-    content: "{{ group_name_pub }}"
+    content: "{{ lookup('vars', group_name + '_pub') }}"
     dest: /etc/ssh/ssh_host_rsa_key
-    #state: present  # Ensures the line is present, appends if not, does nothing if it is.
-    #create: yes
     mode: 0600 # Ensure correct permissions
   become: true
