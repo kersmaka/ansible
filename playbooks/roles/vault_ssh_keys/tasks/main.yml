@@ -12,7 +12,7 @@
     return_content: yes
   register: response
   
-- name: Display the results
+- name: set variable ssh_key
   ansible.builtin.set_fact:
     ssh_key: "{{ response.json.data.data[rhel95]}}"
 
