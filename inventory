@@ -10,7 +10,7 @@ rhel95 ansible_ssh_host=10.0.0.33
 
 [rhel95]
 rhel95 ansible_ssh_host=10.0.0.33
-group_name = rhel96
+group_name=rhel95
 
 [debian_hosts]
 
