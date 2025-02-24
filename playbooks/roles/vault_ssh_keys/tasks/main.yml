@@ -21,7 +21,7 @@
     msg: "group name: {{ group_name }}"   
 
 - name: set variable
-  vars:
+  set_fact:
     item: _pub
 
 - name: Create new variable with appended _pub
