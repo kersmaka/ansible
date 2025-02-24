@@ -17,7 +17,7 @@
 
 - name: Display the results (optional)
   ansible.builtin.debug:
-    msg: "ssh_key: {{ rhel95_lab04 }}"  
+    msg: "ssh_key: {{ rhel95lab04 }}"  
 
 - name: assign value to rhel95
   ansible.builtin.set_fact:
