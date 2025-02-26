@@ -3,7 +3,7 @@
 
 - name: Debug Credential
   debug:
-    var: hasicorp_vault
+    var: credential
     
 - name: Get a Vault secret via the API
   ansible.builtin.uri:
