@@ -1,6 +1,6 @@
 ---
 - hosts: localhost
-  gather_facts: false
+  gather_facts: true # Added this line
   tasks:
     - name: Debug Credential
       debug:
