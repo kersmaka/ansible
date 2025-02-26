@@ -1,5 +1,10 @@
 ---
 # tasks file for vault_ssh_keys
+
+- name: Debug Credential
+  debug:
+    var: credential
+    
 - name: Get a Vault secret via the API
   ansible.builtin.uri:
     url: https://10.0.0.33:8200/v1/ssh_keys/data/lab04
