@@ -2,6 +2,7 @@
 - hosts: localhost
   gather_facts: true # Added this line
   tasks:
-    - name: Debug Credential
-      debug:
-        var: VAULT_TOKEN
+    - name: return secrets as values only
+      ansible.builtin.debug:
+        msg: "A secret value: {{ item }}"
+      loop: "{{ query('community.hashi_vault.hashi_vault', 'secret/data/manysecrets', token=vault_token, url=vault_server, return_format='values') }}"
