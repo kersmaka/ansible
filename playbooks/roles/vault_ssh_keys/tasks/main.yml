@@ -34,10 +34,6 @@
     return_content: yes
   register: response
 
-- name: print url
-  debug:
-    msg: "url: {{ url }}"
-
 - name: Add/Ensure the SSH key is in /etc/ssh/ssh_host_rsa_key
   ansible.builtin.copy:
     content: "{{ group_name + '_pub' }}"
