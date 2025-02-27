@@ -24,7 +24,7 @@
     validate_certs: false
     method: GET
     headers:
-      X-Vault-Token: "{{ VAULT_TOKEN }}"
+      X-Vault-Token: "{{ vault_token }}"
     body: '{"data":{"key":"value"}}'
     body_format: json
     return_content: yes
