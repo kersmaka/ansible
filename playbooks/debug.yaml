@@ -1,4 +1,4 @@
-- hosts: localhost
+- hosts: rhel95
   tasks:
     - name: Test Vault lookup
       debug:
