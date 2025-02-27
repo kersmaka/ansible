@@ -1,17 +1,21 @@
 ---
 # tasks file for vault_ssh_keys
 
-- name: Debug Credential
-  debug:
-    var: credential
-    
+- name: Basic usage
+      ansible.builtin.debug:
+        msg: "'{{ lookup('ansible.builtin.env', 'VAULT_ADDR') }}' is the VAULT URL environment variable."
+
+- name: Basic usage
+      ansible.builtin.debug:
+        msg: "'{{ lookup('ansible.builtin.env', 'VAULT_TOKEN') }}' is the VAULT TOKEN environment variable."
+
 - name: Get a Vault secret via the API
   ansible.builtin.uri:
     url: https://10.0.0.33:8200/v1/ssh_keys/data/lab04
     validate_certs: false
     method: GET
     headers:
-      X-Vault-Token: "{{ credential.inputs.vault_token }}"
+      X-Vault-Token: "{{ VAULT_TOKEN }}"
     body: '{"data":{"key":"value"}}'
     body_format: json
     return_content: yes
