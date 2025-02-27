@@ -1,4 +1,4 @@
-- hosts: rhel95
+- hosts: homelab
   tasks:
     - name: Test Vault lookup
       debug:
