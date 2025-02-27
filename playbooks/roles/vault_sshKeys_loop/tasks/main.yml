@@ -26,3 +26,5 @@
 - name: Display group variable name
   ansible.builtin.debug:
     msg: "group name: {{ group_name }}"   
+
+
