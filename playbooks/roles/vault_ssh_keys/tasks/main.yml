@@ -13,6 +13,10 @@
   set_fact:
     vault_token: "{{ lookup('ansible.builtin.env', 'VAULT_TOKEN') }}"
 
+- name: Get VAULT_URLN from environment
+  set_fact:
+    vault_addr: "{{ lookup('ansible.builtin.env', 'VAULT_ADDR') }}"    
+
 - name: Use the variable
   debug:
     msg: "Vault Token: {{ vault_token }}"
@@ -20,7 +24,7 @@
 
 - name: Get a Vault secret via the API
   ansible.builtin.uri:
-    url: https://10.0.0.33:8200/v1/ssh_keys/data/lab04
+    url: "{{ vault_addr }}"/v1/ssh_keys/data/lab04
     validate_certs: false
     method: GET
     headers:
