@@ -34,7 +34,6 @@
     return_content: yes
   register: response
 
-<<<<<<< HEAD
 - name: set variable retrieved_value
   ansible.builtin.set_fact:
     group_name: "{{ response.json.data.data[group_name + '_pub'] }}"
@@ -43,8 +42,6 @@
   ansible.builtin.debug:
     msg: "retrieved_value: {{ group_name }}"
 
-=======
->>>>>>> 9a54c682fe8bebfbd012179f1202ba4d6b67e2a3
 - name: Add/Ensure the SSH key is in /etc/ssh/ssh_host_rsa_key
   ansible.builtin.copy:
     content: "{{ group_name }}"
