@@ -4,4 +4,4 @@
   tasks:
     - name: Debug Credential
       debug:
-        var: credential
+        var: vault_token
