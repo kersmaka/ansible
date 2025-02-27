@@ -24,7 +24,7 @@
 
 - name: Get a Vault secret via the API
   ansible.builtin.uri:
-    url: "{{ vault_addr }}"v1/ssh_keys/data/lab04
+    url: "{{ vault_addr }} + v1/ssh_keys/data/lab04"
     validate_certs: false
     method: GET
     headers:
