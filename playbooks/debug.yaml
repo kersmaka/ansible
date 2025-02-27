@@ -2,4 +2,4 @@
   tasks:
     - name: Basic usage
       ansible.builtin.debug:
-        msg: "'{{ lookup('ansible.builtin.env', 'vault_server') }}' is the HOME environment variable."
+        msg: "'{{ lookup('ansible.builtin.env', 'VAULT_ADDR') }}' is the HOME environment variable."
