@@ -1,0 +1,18 @@
+#1. A token with a permissions to read the secret
+#2. The URL, including the namespace, of the secret path
+#3. The Key of the Secret for which you want to retreive the vaule for
+
+  - name: Fetch secrets from Vault
+    community.hasi_vault.hasi_vault_read:
+      secret: "{{ item }}"
+      url: "{{ vault_url }}"
+      token: "{{ vault_token }}"
+    loop: "{{ vault_secrets_list }}"
+    register: vault_results
+
+  - name: Set namespaced facts
+    set_fact:
+      corp_vault: "{{ corp_vault | default ({}) | combine ({ item.item: item.data.data }) }}"
+    loop: "{{ vault_results.results }}"
+    loop_control:
+      label: "{{ item.item }}"  
