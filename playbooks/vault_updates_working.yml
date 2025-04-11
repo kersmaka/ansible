@@ -1,0 +1,16 @@
+---
+- name: Test
+  hosts: localhost
+  tasks:
+    - name: test
+      community.hashi_vault.vault_read:
+        url: https://192.168.0.225:8200
+        token: hvs.4icVDQC4UHjq3iTE0A8d52kO
+          #engine_mount_point: secret-recipes
+        path: secret-recipes/data/krabby-patty
+        validate_certs: false
+      register: vault_data
+
+    - name: Display the secret
+      ansible.builtin.debug:
+        var: vault_data.data
