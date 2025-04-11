@@ -13,4 +13,4 @@
   roles:
     - role: vault_authentication
     #- role: vault_ssh_keys
-    - role: vault_variable_test
+    #- role: vault_variable_test
