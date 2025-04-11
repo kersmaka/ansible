@@ -1,22 +1,22 @@
-- name: Read a kv2 secret from Vault via the remote host with userpass auth
-  community.hashi_vault.vault_read:
-    url: https://vault:8201
-    path: secret/data/hello
-    auth_method: userpass
-    username: user
-    password: '{{ passwd }}'
-  register: secret
+# 1. pip install hvac
+# 2. ansible-galxy collection install community.hashi\_vault
 
-- name: Display the secret data
-  ansible.builtin.debug:
-    msg: "{{ secret.data.data.data }}"
+- name : Get the Krabby Patty Secret Formula From Hasicorp Vault
+  hosts: 127.0.0.1
+  tasks:
 
-- name: Retrieve an approle role ID from Vault via the remote host
-  community.hashi_vault.vault_read:
-    url: https://vault:8201
-    path: auth/approle/role/role-name/role-id
-  register: approle_id
+  - name: Read the latest version of a kv2 secret from Vault via the remote host with userpass auth
+    community.hasi_vault.vault_kv2_get:
+      url: https://192.168.0.225:8200/v1/secret-recipes/data/krabby-patty
+      engine_mount_point: secret-recipes
+      path: krabby-patty # equivalent APIT path is secret-recipes/data/krabby-patty
+      namespace: admin/ansible
+      auth_method: userpass
+      username: crabs
+      password: password
+    register: response
 
-- name: Display the role ID
-  ansible.builtin.debug:
-    msg: "{{ approle_id.data.data.role_id }}"
+  - name: Display the results
+    ansible.builtin.debug:
+    msg:
+      - "Secret: {{ response.secret }}"
