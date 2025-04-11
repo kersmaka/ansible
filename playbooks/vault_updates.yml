@@ -1,18 +1,16 @@
-- name: Get the Krabby Patty Secret Formula From HashiCorp Vault
-  hosts: 127.0.0.1
+---
+- name: Test
+  hosts: localhost
   tasks:
-    - name: Read the latest version of a kv2 secret from Vault via the remote host with userpass auth
-      community.hasi_vault.vault_kv2_get:
+    - name: test
+      community.hashi_vault.vault_kv2_get:
         url: https://192.168.0.225:8200
+        token: hvs.4icVDQC4UHjq3iTE0A8d52kO
         engine_mount_point: secret-recipes
-        path: krabby-patty # equivalent API path is secret-recipes/data/krabby-patty
-        #namespace: admin/ansible
-        auth_method: userpass
-        username: crabs
-        password: password
-      register: response
+        path: krabby-patty
+        validate_certs: false
+      register: vault_data
 
-    - name: Display the results
+    - name: Display the secret
       ansible.builtin.debug:
-        msg:
-          - "Secret: {{ response.secret }}"
+        var: vault_data.secret
