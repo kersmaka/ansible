@@ -1,18 +1,16 @@
 ---
-- name: testing vault secrets
-  tasks:
-    - name: Fetch secrets from Vault
-      community.hashi_vault.vault_read:
-        secret: "{{ item }}"
-        url: https://192.168.0.225:8200
-        token: hvs.4icVDQC4UHjq3iTE0A8d52kO
-        validate_certs: false
-      loop: "{{ vault_secrets_list }}"
-        #engine_mount_point: secret-recipes
-        #path: krabby-patty
-        #validate_certs: false
-      register: vault_data
+- name: Fetch secrets from Vault
+  community.hashi_vault.vault_read:
+    secret: "{{ item }}"
+    url: https://192.168.0.225:8200
+    token: hvs.4icVDQC4UHjq3iTE0A8d52kO
+    validate_certs: false
+  loop: "{{ vault_secrets_list }}"
+    #engine_mount_point: secret-recipes
+    #path: krabby-patty
+    #validate_certs: false
+  register: vault_data
 
-    - name: Display the secret
-      ansible.builtin.debug:
-        var: vault_data.secret
+- name: Display the secret
+  ansible.builtin.debug:
+    var: vault_data.secret
