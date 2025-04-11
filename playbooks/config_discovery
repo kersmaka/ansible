@@ -1,0 +1,14 @@
+- name: Check Ansible Config Paths
+  hosts: localhost
+  tasks:
+    - name: Display Ansible Config Path (Core 2.16+)
+      ansible.builtin.debug:
+        msg: "Ansible Config Path: {{ lookup('ansible.builtin.config', 'config_file') }}"
+
+    - name: Display Ansible Collection Paths (Core 2.16+)
+      ansible.builtin.debug:
+        msg: "Ansible Collection Paths: {{ lookup('ansible.builtin.config', 'DEFAULT_COLLECTIONS_PATHS') }}"
+
+    - name: Display Ansible Collection Path (Core 2.16+)
+      ansible.builtin.debug:
+        msg: "Ansible Collection Path: {{ lookup('ansible.builtin.config', 'DEFAULT_COLLECTIONS_PATH') }}"
