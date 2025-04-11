@@ -1,14 +1,18 @@
-- name: Check Ansible Config Paths
+- name: Check Ansible Config Paths (for Ansible < 2.16)
   hosts: localhost
   tasks:
-    - name: Display Ansible Config Path (Core 2.16+)
+    - name: Display Ansible Config File (Environment Variable)
       ansible.builtin.debug:
-        msg: "Ansible Config Path: {{ lookup('ansible.builtin.config', 'config_file') }}"
+        msg: "Ansible Config File (ANSIBLE_CONFIG env var): {{ ansible_config_file | default('Not set') }}"
 
-    - name: Display Ansible Collection Paths (Core 2.16+)
+    - name: Display Default Ansible Configuration Paths (Guess)
       ansible.builtin.debug:
-        msg: "Ansible Collection Paths: {{ lookup('ansible.builtin.config', 'DEFAULT_COLLECTIONS_PATHS') }}"
+        msg: "Default Ansible Config Paths (based on precedence): ~/.ansible.cfg, /etc/ansible/ansible.cfg"
 
-    - name: Display Ansible Collection Path (Core 2.16+)
+    - name: Display Ansible Collection Paths (Environment Variable)
       ansible.builtin.debug:
-        msg: "Ansible Collection Path: {{ lookup('ansible.builtin.config', 'DEFAULT_COLLECTIONS_PATH') }}"
+        msg: "Ansible Collection Paths (ANSIBLE_COLLECTIONS_PATH env var): {{ ansible_collections_path | default('Not set') }}"
+
+    - name: Display Default Ansible Collection Paths (Guess)
+      ansible.builtin.debug:
+        msg: "Default Ansible Collection Paths (based on precedence): ~/.ansible/collections, /usr/share/ansible/collections, /etc/ansible/collections"
