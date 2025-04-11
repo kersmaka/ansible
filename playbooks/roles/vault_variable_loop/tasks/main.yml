@@ -1,6 +1,5 @@
 ---
 - name: testing vault secrets
-  hosts: localhost
   tasks:
     - name: Fetch secrets from Vault
       community.hashi_vault.vault_read:
