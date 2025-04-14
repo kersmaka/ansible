@@ -12,9 +12,9 @@
           - secret_name: "secret-recipes/data/krabby-patty"
             keys: ["krabby-patty"]
 
-- name: Debug vault_secrets
-  ansible.builtin.debug:
-    var: vault_secrets
+    - name: Debug vault_secrets
+      ansible.builtin.debug:
+      var: vault_secrets
 
 - name: Include the hasicorp_vault role
   hosts: all  # Add a hosts directive here (can be the same or different)
