@@ -4,18 +4,27 @@
 
 ---
 - name: Define the list of Vault secrets required by this role
-  ansible.builtin.set_fact:
-    vault_secrets:
-      - secret_name: "secret-recipes/data/krabby-patty"
-        keys: ["krabby-patty"]
+  hosts: all  # Add a hosts directive here
+  tasks:
+    - name: Set Vault secrets fact
+      ansible.builtin.set_fact:
+        vault_secrets:
+          - secret_name: "secret-recipes/data/krabby-patty"
+            keys: ["krabby-patty"]
 
 - name: Include the hasicorp_vault role
-  include_role:
-    name: hasicorp_vault
-  vars:
-    vault_secrets: "{{ vault_secrets }}"
-    vault_kv_version: "kv2"
+  hosts: all  # Add a hosts directive here (can be the same or different)
+  tasks:
+    - name: Include Vault role
+      include_role:
+        name: hasicorp_vault
+      vars:
+        vault_secrets: "{{ vault_secrets }}"
+        vault_kv_version: "kv2"
 
 - name: Example of accessing the secrets
-  debug:
-    msg: "Kerberos Password: {{ ford_vault['secret-recipes/data/krabby-patty']['krabby-patty'] | mandatory }}"
+  hosts: all  # Add a hosts directive here
+  tasks:
+    - name: Debug Vault secret
+      ansible.builtin.debug:
+        msg: "Kerberos Password: {{ ford_vault['secret-recipes/data/krabby-patty']['krabby-patty'] | mandatory }}"
