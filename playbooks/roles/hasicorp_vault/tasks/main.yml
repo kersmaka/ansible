@@ -9,8 +9,6 @@
     vault_address: "{{ lookup('ansible.builtin.env', 'VAULT_ADDR') }}"
 
 - name: Fetch specific keys from Vault secrets
-  vars:
-    vault_secret_data: {}
   loop: "{{ vault_secrets }}"
   loop_control:
     loop_var: secret
@@ -30,6 +28,8 @@
       ansible.builtin.set_fact:
         vault_secret_data: "{{ vault_secret_data | default({}) | combine({secret.secret_name: secret_result.json.data.data | select(key, key in secret.keys) | dict}) }}"
       when: secret_result.json is defined and secret_result.json.data is defined and secret_result.json.data.data is defined
+  vars:
+    vault_secret_data: {}
 
 - name: Structure the Vault data under the ford_vault key
   ansible.builtin.set_fact:
