@@ -4,10 +4,10 @@
 
 - name: Prompt user for input and confirmation (looping)
   block:
-    - name: Import prompt tasks and loop until condition is met
-      import_tasks: prompt.yml
+    - name: Include prompt tasks and loop until condition is met
+      include_tasks: prompt.yml
       until: continue_prompt == 'y'
-      loop: [ {} ] # Execute the block at least once
+      loop: [ {} ] # Execute the included tasks at least once
   # You might not need a loop here on the block itself
   # loop: [ {} ]
 
