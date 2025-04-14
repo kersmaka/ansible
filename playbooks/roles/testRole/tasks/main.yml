@@ -1,13 +1,15 @@
----
 - name: Initialize continue_prompt
   set_fact:
     continue_prompt: ''
 
 - name: Prompt user for input and confirmation (looping)
   block:
-    - import_tasks: prompt.yml
-  until: continue_prompt == 'y'
-  loop: [ {} ] # Execute the block at least once
+    - name: Import prompt tasks and loop until condition is met
+      import_tasks: prompt.yml
+      until: continue_prompt == 'y'
+      loop: [ {} ] # Execute the block at least once
+  # You might not need a loop here on the block itself
+  # loop: [ {} ]
 
 - name: Final output
   debug:
