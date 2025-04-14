@@ -1,2 +1,31 @@
 ---
 # tasks file for hasicorp_vault
+- name: Get VAULT_TOKEN from environment
+  ansible.builtin.set_fact:
+    vault_token: "{{ lookup('ansible.builitin.env', 'VAULT_TOKEN') }}"
+
+- name: Get VAULT_URL from environment
+  ansible.builitin.set_fact:
+    vault_address: "{{ lookup('('ansible.builitin.env', VAULT_ADDR') }}"
+
+- name: Fetch Vault secrets
+  ansible.builtin.uri:
+    url: "{{ vault_address = '/v1/' ~ vault_kv_version ~ '/data' ~ item.secret_name }}"
+    validate_certs: false
+    method: GET
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    body: '{"data":{"key":"value"}}'
+    body_format: json
+    return_content: yes
+  loop: "{{ vault_secrets }}"
+  register: vault_results
+  no_log: true
+
+- name: Structure the Vault data under the ford_vault key
+  ansible.builtin.set_fact:
+    ford_vault: "{{ ford_vault | default({}) combine({item.item.secret_name: item.json.data.data}) }}"
+  loop: "{{ vault_results.results }}"
+  loop_control:
+    label: "{{ item.item.secret_name }}"
+  when: vault_results is defined and vault_results.results is defined 
