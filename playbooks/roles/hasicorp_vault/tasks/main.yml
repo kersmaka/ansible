@@ -8,21 +8,29 @@
   ansible.builtin.set_fact:
     vault_address: "{{ lookup('ansible.builtin.env', 'VAULT_ADDR') }}"
 
-- name: Fetch Vault secrets
-  ansible.builtin.uri:
-    url: "{{ vault_address }}/v1/{{ vault_kv_version }}/data/{{ item.secret_name }}"
-    validate_certs: false
-    method: GET
-    headers:
-      X-Vault-Token: "{{ vault_token }}"
-    return_content: yes
+- name: Fetch specific keys from Vault secrets
+  vars:
+    vault_secret_data: {}
+  block:
+    - name: Fetch data for {{ secret.secret_name }}
+      ansible.builtin.uri:
+        url: "{{ vault_address }}/v1/{{ vault_kv_version }}/data/{{ secret.secret_name }}"
+        validate_certs: false
+        method: GET
+        headers:
+          X-Vault-Token: "{{ vault_token }}"
+        return_content: yes
+      register: secret_result
+      no_log: false
+
+    - name: Extract specific keys for {{ secret.secret_name }}
+      ansible.builtin.set_fact:
+        vault_secret_data: "{{ vault_secret_data | combine({secret.secret_name: secret_result.json.data.data | select(key, key in secret.keys) | dict}) }}"
+      when: secret_result.json is defined and secret_result.json.data is defined and secret_result.json.data.data is defined
   loop: "{{ vault_secrets }}"
-  register: vault_results
-  no_log: false
+  loop_control:
+    loop_var: secret
 
 - name: Structure the Vault data under the ford_vault key
   ansible.builtin.set_fact:
-    ford_vault: "{{ ford_vault | default({}) | combine({item.item.secret_name: item.json.data.data}) }}"
-  loop: "{{ vault_results.results }}"
-  loop_control:
-    label: "{{ item.item.secret_name }}"
+    ford_vault: "{{ vault_secret_data }}"
