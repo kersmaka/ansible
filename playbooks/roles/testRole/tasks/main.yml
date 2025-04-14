@@ -1,16 +1,24 @@
-- name: Initialize continue_prompt
-  set_fact:
-    continue_prompt: ''
+- name: Define variables to prompt for
+  vars_prompt:
+    - name: user_input
+      prompt: "Please enter some text:"
+      private: no
+    - name: continue_prompt_input
+      prompt: "Do you want to continue? (y/n)"
+      private: no
+      default: "n"
 
-- name: Prompt user for input and confirmation (looping)
-  block:
-    - name: Include prompt tasks and potentially loop the entire prompt process
-      include_tasks: prompt.yml
-      loop: [ {} ] # Execute the prompt tasks at least once (optional)
-  # You likely don't need a loop here on the block itself
+- name: Set facts based on prompted variables
+  set_fact:
+    user_input_variable: "{{ user_input }}"
+    continue_prompt: "{{ continue_prompt_input }}"
+
+- name: Include tasks based on confirmation
+  include_tasks: your_other_tasks.yml
+  when: continue_prompt == 'y'
 
 - name: Final output
   debug:
     msg: |
       Continue Prompt: "{{ continue_prompt }}"
-      User Input: "{{ user_input_variable.user_input | default('No input provided') }}"
+      User Input: "{{ user_input_variable | default('No input provided') }}"
