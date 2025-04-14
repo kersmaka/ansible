@@ -2,27 +2,20 @@
 #2. The URL, including the namespace, of the secret path
 #3. The Key of the Secret for which you want to retreive the vaule for
 
-- name: Get the Krabby Patty Secret Formula From Hasicopr Vault
-  hosts: localhost
+---
+- name: Define the list of Vault secrets required by this role
+  ansible.builtin.set_fact:
+    vault_secrets:
+      - secret_name: "secret-recipes/data/krabby-patty"
+        keys: ["krabby-patty"]
+
+- name: Include the hasicorp_vault role
+  include_role:
+    name: hasicorp_vault
   vars:
-    #vault_token: hvs.CAESIK6CenLnIOzwB9C2LLoTW_41632Asg4jXLKoalhHG-38Gh4KHGh2cy5rTnpkaXVGa2NNQmx2dGQ3SVp6b1J5S3Q
-    vault_token: hvs.4icVDQC4UHjq3iTE0A8d52kO
-  tasks:
+    vault_secrets: "{{ vault_secrets }}"
+    vault_kv_version: "kv2"
 
-#URL module via API
-  - name: Get a Vault secret via the API
-    ansible.builtin.uri:
-      url: https://192.168.0.225:8200/v1/secret-recipes/data/krabby-patty
-      validate_certs: false
-      method: GET
-      headers:
-        X-Vault-Token: "{{ vault_token }}" 
-      body: '{"data":{"key":"value"}}'
-      body_format: json
-      return_content: yes
-    register: response
-
-  - name: Display the results
-    ansible.builtin.debug:
-      msg:
-        - "Secret: {{ response.json.data.data['formula']}}"
+- name: Example of accessing the secrets
+  debug:
+    msg: "Kerberos Password: {{ ford_vault['secret-recipes/data/krabby-patty']['krabby-patty'] | mandatory }}"
