@@ -1,5 +1,5 @@
 - name: 'Loop Over Tasks File'
-  gather_facts: true
+  gather_facts: false
   vars: 
     countdown: 5
   tasks:
