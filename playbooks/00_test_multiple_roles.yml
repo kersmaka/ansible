@@ -13,8 +13,8 @@
   roles:
     - role: vault_authentication
     - role: test_role
-    - role: testRole
-    #- role: hasicorp_vault
+    #- role: testRole
+    - role: hasicorp_vault
     #- role: vault_variable_loop
     #- role: vault_ssh_keys
     #- role: vault_variable_test
