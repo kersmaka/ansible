@@ -1,7 +1,7 @@
 - name: 'Loop Over Tasks File'
   gather_facts: false
-  vars: 
+  vars:
     countdown: 5
   tasks:
-    include_tasks: looptest-tasks.yml
-    loop: "{{ range(0, countdown)|list }}"
+    - include_tasks: looptest-tasks.yml
+      loop: "{{ range(0, countdown)|list }}"
