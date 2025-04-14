@@ -18,7 +18,7 @@
     return_content: yes
   loop: "{{ vault_secrets }}"
   register: vault_results
-  no_log: true
+  no_log: false
 
 - name: Structure the Vault data under the ford_vault key
   ansible.builtin.set_fact:
