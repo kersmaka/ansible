@@ -1,18 +1,24 @@
----
-- name: Prompt for input variable
-  pause:
-    prompt: "enter variable"
-  register: user_input_variable
+- name: Prompt for user input
+  prompt:
+    name: user_input
+    prompt: "Please enter some text:"
+    private: no
+  register: user_response
 
-- name: Show input variable
-  debug:
-    msg: "Your input: {{ user_input_variable.user_input }}"
+- name: Set user_input_variable fact
+  set_fact:
+    user_input_variable: "{{ user_response }}"
 
-- name: Confirm to continue
-  pause:
-    prompt: "You're happy? (y/n)"
-  register: continue_prompt_response
+- name: Prompt for confirmation (retry until 'y')
+  prompt:
+    name: continue_prompt_input
+    prompt: "Do you want to continue? (y/n)"
+    private: no
+  register: continue_response
+  until: continue_response.user_input == 'y'
+  retries: 3 # Optional: Limit the number of retries
+  delay: 2 # Optional: Wait time between retries
 
 - name: Set continue_prompt fact
   set_fact:
-    continue_prompt: "{{ continue_prompt_response.user_input | lower }}"
+    continue_prompt: "{{ continue_response.user_input }}"
