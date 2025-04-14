@@ -1,24 +1,8 @@
-- name: Define variables to prompt for
-  vars_prompt:
-    - name: user_input
-      prompt: "Please enter some text:"
-      private: no
-    - name: continue_prompt_input
-      prompt: "Do you want to continue? (y/n)"
-      private: no
-      default: "n"
-
-- name: Set facts based on prompted variables
-  set_fact:
-    user_input_variable: "{{ user_input }}"
-    continue_prompt: "{{ continue_prompt_input }}"
-
-- name: Include tasks based on confirmation
-  include_tasks: your_other_tasks.yml
-  when: continue_prompt == 'y'
-
-- name: Final output
-  debug:
-    msg: |
-      Continue Prompt: "{{ continue_prompt }}"
-      User Input: "{{ user_input_variable | default('No input provided') }}"
+- name: 'Loop Over Tasks File'
+  hosts: localhost
+  gather_facts: galse
+  vars: 
+    countdown: 5
+  tasks:
+    include_tasks: looptest-tasks.yml
+    loop: "{{ range(0, countdown)|list }}"
