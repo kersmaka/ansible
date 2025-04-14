@@ -1,0 +1,42 @@
+- hosts: all #
+  gather_facts: false
+  name: setup
+  vars_files: group_vars/all.yml
+
+
+  tasks:
+
+    - set_fact:
+        continue_prompt: ''   
+    - import_tasks: tasks/prompt.yml
+      until: continue_prompt == 'y'
+      
+
+    - name: fin
+      debug:
+        msg: |
+          "{{continue_prompt}}"
+          "{{user_input_variable.user_input}}"
+      
+
+
+# prompt.yml
+- name: Prompt for input variable
+  pause:
+    prompt: "enter variable"
+  register: user_input_variable
+
+- name: Show input variable
+  debug:
+    msg: "Your input: {{ user_input_variable.user_input }}"
+
+- name: Confirm to continue
+  pause:
+    prompt: "You're happy? (y/n)"
+  register: continue_prompt
+
+- set_fact: 
+    continue_prompt: "{{continue_prompt.user_input}}"
+
+- include_tasks: tasks/prompt.yml
+  when: continue_prompt != 'y'
