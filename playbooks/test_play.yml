@@ -1,0 +1,11 @@
+- name: Test Community HashiCorp Vault Collection
+  hosts: 127.0.0.1
+  tasks:
+    - name: Ping Vault (basic connectivity check)
+      community.hashi_vault.vault_ping:
+        url: https://192.168.0.225:8200
+      register: ping_response
+
+    - name: Display Ping Result
+      ansible.builtin.debug:
+        var: ping_response
