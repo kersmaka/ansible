@@ -6,9 +6,9 @@
     token: hvs.4icVDQC4UHjq3iTE0A8d52kO
     validate_certs: false
   loop: "{{ vault_secrets_list }}"
-    #engine_mount_point: secret-recipes
-    #path: krabby-patty
-    #validate_certs: false
+  # engine_mount_point: secret-recipes
+  # path: krabby-patty
+  # validate_certs: false
   register: vault_data
 
 - name: Display the secret
