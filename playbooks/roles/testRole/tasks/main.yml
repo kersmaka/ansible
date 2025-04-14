@@ -1,6 +1,5 @@
 - name: 'Loop Over Tasks File'
-  hosts: localhost
-  gather_facts: galse
+  gather_facts: false
   vars: 
     countdown: 5
   tasks:
