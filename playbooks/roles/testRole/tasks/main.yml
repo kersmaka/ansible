@@ -1,2 +1,16 @@
 ---
-# tasks file for testRole
+- name: Initialize continue_prompt
+  set_fact:
+    continue_prompt: ''
+
+- name: Prompt user for input and confirmation (looping)
+  block:
+    - import_tasks: prompt.yml
+  until: continue_prompt == 'y'
+  loop: [ {} ] # Execute the block at least once
+
+- name: Final output
+  debug:
+    msg: |
+      Continue Prompt: "{{ continue_prompt }}"
+      User Input: "{{ user_input_variable.user_input | default('No input provided') }}"

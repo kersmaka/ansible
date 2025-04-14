@@ -1,0 +1,18 @@
+---
+- name: Prompt for input variable
+  pause:
+    prompt: "enter variable"
+  register: user_input_variable
+
+- name: Show input variable
+  debug:
+    msg: "Your input: {{ user_input_variable.user_input }}"
+
+- name: Confirm to continue
+  pause:
+    prompt: "You're happy? (y/n)"
+  register: continue_prompt_response
+
+- name: Set continue_prompt fact
+  set_fact:
+    continue_prompt: "{{ continue_prompt_response.user_input | lower }}"
