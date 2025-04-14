@@ -14,7 +14,7 @@
 
     - name: Debug vault_secrets
       ansible.builtin.debug:
-      var: vault_secrets
+        msg: "Value of vault_secrets: {{ vault_secrets }}"
 
 - name: Include the hasicorp_vault role
   hosts: all  # Add a hosts directive here (can be the same or different)
