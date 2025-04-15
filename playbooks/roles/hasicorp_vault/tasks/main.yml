@@ -8,29 +8,19 @@
   ansible.builtin.set_fact:
     vault_address: "{{ lookup('ansible.builtin.env', 'VAULT_ADDR') }}"
 
-- name: Fetch specific keys from Vault secrets
+- name: Get kersmaka Vault secrets via the API
+  ansible.builtin.uri:
+    url: "{{ vault_address }}/v1/kv2/data/{{ item.secret_path }}"
+    validate_certs: true
+    method: Get
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+      return_content: yes
   loop: "{{ vault_secrets }}"
-  loop_control:
-    loop_var: secret
-  block:
-    - name: Fetch data for {{ secret.secret_name }}
-      ansible.builtin.uri:
-        url: "{{ vault_address }}/v1/{{ vault_kv_version }}/data/{{ secret.secret_name }}"
-        validate_certs: false
-        method: GET
-        headers:
-          X-Vault-Token: "{{ vault_token }}"
-        return_content: yes
-      register: secret_result
-      no_log: false
+  register: vault_results
 
-    - name: Extract specific keys for {{ secret.secret_name }}
-      ansible.builtin.set_fact:
-        vault_secret_data: "{{ vault_secret_data | default({}) | combine({secret.secret_name: secret_result.json.data.data | select(key, key in secret.keys) | dict}) }}"
-      when: secret_result.json is defined and secret_result.json.data is defined and secret_result.json.data.data is defined
-  vars:
-    vault_secret_data: {}
-
-- name: Structure the Vault data under the ford_vault key
+- name: Set facts under kersmaka_vault namespace
   ansible.builtin.set_fact:
-    ford_vault: "{{ vault_secret_data }}"
+    kersmaka_vault: "{{ kersmaka_vault | default({}) | combine ( { (item.item.key_prefix): vault_results.results[loop.index0].json.data.data} ) }}"
+  loop: "{{ vault_secrets }}"
+  no_log: true
