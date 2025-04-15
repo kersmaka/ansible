@@ -1,5 +1,3 @@
----
-# tasks file for hasicorp_vault
 - name: Get VAULT_TOKEN from environment
   ansible.builtin.set_fact:
     vault_token: "{{ lookup('ansible.builtin.env', 'VAULT_TOKEN') }}"
@@ -19,17 +17,9 @@
   loop: "{{ vault_secrets }}"
   register: vault_results
 
-- name: Debug vault_secrets
-  ansible.builtin.debug:
-    var: vault_secrets
-
-- name: Debug vault_results
-  ansible.builtin.debug:
-    var: vault_results  
-
 - name: Set facts under kersmaka_vault namespace
   ansible.builtin.set_fact:
-    kersmaka_vault: "{{ kersmaka_vault | default({}) | combine ( { (item.key_prefix): vault_results.results[loop.index0].json.data.data | default('DATA_ERROR') } ) }}"
+    kersmaka_vault: "{{ kersmaka_vault | default({}) | combine ( { (item.key_prefix): vault_results.results[loop.index0].json.data.data | default({}) } ) }}"
   loop: "{{ vault_secrets }}"
   no_log: false
 
