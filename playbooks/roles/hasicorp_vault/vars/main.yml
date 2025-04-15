@@ -1,2 +1,7 @@
 ---
 # vars file for hasicorp_vault
+vault_secrets:
+  - secret_path: "hpc-ansible-secrets/ssh-keys/prod/hpckrb5"
+    key_prefix: "hpckrb5"
+  - secret_path: "hpc-ansible-secrets/database/prod/db_credentials"
+    key_prefix: "db"
