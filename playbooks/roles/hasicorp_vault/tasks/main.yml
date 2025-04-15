@@ -29,6 +29,6 @@
 
 - name: Set facts under kersmaka_vault namespace
   ansible.builtin.set_fact:
-    kersmaka_vault: "{{ kersmaka_vault | default({}) | combine ( { (item.key_prefix): vault_results.results[loop.index0].json.data.data} ) }}"
+    kersmaka_vault: "{{ kersmaka_vault | default({}) | combine ( { (item.key_prefix): vault_results.results[loop.index0 | default('INDEX_ERROR') ].json.data.data | default('DATA_ERROR') } ) }}"
   loop: "{{ vault_secrets }}"
   no_log: false
