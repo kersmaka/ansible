@@ -15,6 +15,21 @@
     - role: test_role
     #- role: testRole
     - role: hasicorp_vault
+      vars:
+        vault_secrets:
+          - secret_path: "/v1/secret-recipes/data/krabby-patty"
+          key_prefix: "krabby-patty"
+          - secret_path: "/v1/secret-recipes/data/goku-pizza"
+          key_prefix: "goku-pizza"
+
+    tasks:
+      - name: Print Kerberos Password
+        ansible.builtin.debug:
+          msg: "Kerberos Password: {{ kersmaka_vault['krabby-patty']['krabby-patty'] | mandatory }}"
+      
+      - name: Print Database hosts
+        ansible.builtin.debug:
+          msg: "Database Host: {{ kersmaka_vault['goku-pizza']['goku-pizza'] | mandatory }}"
     #- role: vault_variable_loop
     #- role: vault_ssh_keys
     #- role: vault_variable_test
