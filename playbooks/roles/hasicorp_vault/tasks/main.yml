@@ -1,3 +1,4 @@
+---
 - name: Get VAULT_TOKEN from environment
   ansible.builtin.set_fact:
     vault_token: "{{ lookup('ansible.builtin.env', 'VAULT_TOKEN') }}"
