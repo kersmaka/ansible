@@ -23,4 +23,4 @@
   ansible.builtin.set_fact:
     kersmaka_vault: "{{ kersmaka_vault | default({}) | combine ( { (item.item.key_prefix): vault_results.results[loop.index0].json.data.data} ) }}"
   loop: "{{ vault_secrets }}"
-  no_log: true
+  no_log: false
