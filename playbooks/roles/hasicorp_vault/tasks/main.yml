@@ -11,7 +11,7 @@
 - name: Get kersmaka Vault secrets via the API
   ansible.builtin.uri:
     url: "{{ vault_address }}/v1/kv2/data/{{ item.secret_path }}"
-    validate_certs: true
+    validate_certs: false
     method: Get
     headers:
       X-Vault-Token: "{{ vault_token }}"
