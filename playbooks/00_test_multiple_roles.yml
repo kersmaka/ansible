@@ -18,10 +18,9 @@
       vars:
         vault_secrets:
           - secret_path: "/v1/secret-recipes/data/krabby-patty"
-          key_prefix: "krabby-patty"
+             key_prefix: "krabby-patty"
           - secret_path: "/v1/secret-recipes/data/goku-pizza"
-          key_prefix: "goku-pizza"
-
+             key_prefix: "goku-pizza"
     tasks:
       - name: Print Kerberos Password
         ansible.builtin.debug:
