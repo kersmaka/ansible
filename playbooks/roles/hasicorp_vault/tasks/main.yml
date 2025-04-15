@@ -19,6 +19,14 @@
   loop: "{{ vault_secrets }}"
   register: vault_results
 
+- name: Debug vault_secrets
+  ansible.builtin.debug:
+    var: vault_secrets
+
+- name: Debug vault_results
+  ansible.builtin.debug:
+    var: vault_results  
+
 - name: Set facts under kersmaka_vault namespace
   ansible.builtin.set_fact:
     kersmaka_vault: "{{ kersmaka_vault | default({}) | combine ( { (item.key_prefix): vault_results.results[loop.index0].json.data.data} ) }}"
