@@ -16,7 +16,7 @@
   tasks:
     - name: Print Kerberos Password
       ansible.builtin.debug:
-        msg: "Kerberos Password: {{ kersmaka_vault['krabby-patty']['krabby-patty'] | mandatory }}"
+        msg: "Kerberos Password: {{ kersmaka_vault['krabby-patty']['formula'] | mandatory }}"
 
     - name: Print Database hosts
       ansible.builtin.debug:
