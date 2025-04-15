@@ -17,14 +17,14 @@
   loop: "{{ vault_secrets }}"
   register: vault_results
 
-- name: Debug individual vault_results content
+- name: Debug individual vault_results content (using index filter)
   ansible.builtin.debug:
-    var: vault_results.results[ansible_loop.index0]
+    var: vault_results.results[{{ loop.index0 }}]
   loop: "{{ vault_secrets }}"
   no_log: false
 
 - name: Set facts under kersmaka_vault namespace
   ansible.builtin.set_fact:
-    kersmaka_vault: "{{ kersmaka_vault | default({}) | combine ( { (item.key_prefix): vault_results.results[ansible_loop.index0].json.data.data | default({}) } ) }}"
+    kersmaka_vault: "{{ kersmaka_vault | default({}) | combine ( { (item.key_prefix): vault_results.results[{{ loop.index0 }}].json.data.data | default({}) } ) }}"
   loop: "{{ vault_secrets }}"
   no_log: false
