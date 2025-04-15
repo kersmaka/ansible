@@ -1,4 +1,3 @@
----
 - name: Get VAULT_TOKEN from environment
   ansible.builtin.set_fact:
     vault_token: "{{ lookup('ansible.builtin.env', 'VAULT_TOKEN') }}"
@@ -18,14 +17,14 @@
   loop: "{{ vault_secrets }}"
   register: vault_results
 
+- name: Debug vault_results.results within set_fact
+  ansible.builtin.debug:
+    var: vault_results.results[loop.index0]
+  loop: "{{ vault_secrets }}"
+  no_log: false
+
 - name: Set facts under kersmaka_vault namespace
   ansible.builtin.set_fact:
     kersmaka_vault: "{{ kersmaka_vault | default({}) | combine ( { (item.key_prefix): vault_results.results[loop.index0].json.data.data | default({}) } ) }}"
   loop: "{{ vault_secrets }}"
   no_log: false
-
-- name: Debug successful vault_results JSON
-  ansible.builtin.debug:
-    var: vault_results.results[loop.index0].json
-  loop: "{{ vault_secrets }}"
-  when: not vault_results.results[loop.index0].failed | default(false)
