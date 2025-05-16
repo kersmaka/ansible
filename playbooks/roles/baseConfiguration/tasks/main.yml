@@ -1,6 +1,5 @@
 ---
 - name: Update all package on managed nodes
-  hosts: "{{ target }}"
   become: true
 
   tasks:
