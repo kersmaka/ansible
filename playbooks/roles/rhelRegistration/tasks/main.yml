@@ -2,7 +2,7 @@
 - name: Register node to Red Hat Subscription Management (RHSM)
 
   vars_files:
-    - vars/redhat_credentials.yml  # Create this file with your username and password
+    - vars/main.yml  # Create this file with your username and password
 
   tasks:
     - name: Ensure subscription-manager package is installed
