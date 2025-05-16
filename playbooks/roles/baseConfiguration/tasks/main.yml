@@ -1,0 +1,10 @@
+---
+- name: Update all package on managed nodes
+  hosts: "{{ target }}"
+  become: true
+
+  tasks:
+    - name: Run dnf update
+      dnf:
+        name: "*"
+        state: latest
