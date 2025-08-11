@@ -29,4 +29,4 @@
 
     - name: Print the hostname
       debug:
-        msg: "The Ansible playbook is running on host: {{ hostname_output.stdout }      
+        msg: "The Ansible playbook is running on host: {{ hostname_output.stdout }}"
