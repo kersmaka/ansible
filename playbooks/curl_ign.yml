@@ -30,3 +30,11 @@
     - name: Print the hostname
       debug:
         msg: "The Ansible playbook is running on host: {{ hostname_output.stdout }}"
+
+    - name: Get the managed host's IP address
+      ansible.builtin.shell: ip a | grep 'inet ' | grep -v 127.0.0.1 | awk '{print $2}' | cut -d/ -f1
+      register: ip_address_output
+
+    - name: Print the managed host's IP address
+      debug:
+        msg: "The managed host's IP address is: {{ ip_address_output.stdout }}"    
