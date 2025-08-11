@@ -1,0 +1,24 @@
+---
+# This playbook uses the URI module to check the status of ign.com.
+# It is the preferred method for making HTTP requests with Ansible.
+- name: Check ign.com with the URI module
+  hosts: test_nodes
+  connection: local
+  gather_facts: false # Gathering facts is not needed for this task, so we disable it for speed
+
+  tasks:
+    - name: Fetch URL content from ign.com
+      ansible.builtin.uri:
+        url: http://ign.com
+        method: GET
+        return_content: true # This will fetch the HTML content of the page
+        status_code: 200     # We expect an HTTP 200 OK response
+      register: ign_response # Store the module's output in a variable
+
+    - name: Display the response status and headers
+      ansible.builtin.debug:
+        msg: "Status Code: {{ ign_response.status }}, URL: {{ ign_response.url }}"
+
+    - name: Display a portion of the page content
+      ansible.builtin.debug:
+        msg: "Content snippet: {{ ign_response.content[:100] }}"
