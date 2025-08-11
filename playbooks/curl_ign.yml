@@ -23,14 +23,6 @@
       ansible.builtin.debug:
         msg: "Content snippet: {{ ign_response.content[:100] }}"
 
-    - name: Show the hostname
-      command: hostname -f
-      register: hostname_output
-
-    - name: Print the hostname
-      debug:
-        msg: "The Ansible playbook is running on host: {{ hostname_output.stdout }}"
-
     - name: Get the managed host's IP address
       ansible.builtin.shell: ip a | grep 'inet ' | grep -v 127.0.0.1 | awk '{print $2}' | cut -d/ -f1
       register: ip_address_output
