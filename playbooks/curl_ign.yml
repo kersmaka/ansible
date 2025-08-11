@@ -22,3 +22,11 @@
     - name: Display a portion of the page content
       ansible.builtin.debug:
         msg: "Content snippet: {{ ign_response.content[:100] }}"
+
+    - name: Show the hostname
+      command: hostname -f
+      register: hostname_output
+
+    - name: Print the hostname
+      debug:
+        msg: "The Ansible playbook is running on host: {{ hostname_output.stdout }      
