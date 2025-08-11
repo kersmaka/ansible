@@ -4,6 +4,7 @@ rhel95-lab04 ansible_ssh_host=10.0.0.155
 
 [all]
 rhel95 ansible_ssh_host=10.0.0.33
+testkvm08.com ansible_ssh_host=192.168.0.66
 
 [rhel_hosts]
 rhel95 ansible_ssh_host=10.0.0.33
