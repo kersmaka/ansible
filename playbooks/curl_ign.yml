@@ -25,8 +25,6 @@
         - 'rule family="ipv4" destination address="0.0.0.0/0" port port="443" protocol="tcp" drop'
         - 'rule family="ipv6" destination address="::/0" port port="80" protocol="tcp" drop'
         - 'rule family="ipv6" destination address="::/0" port port="443" protocol="tcp" drop'
-        - 'rule family="ipv4" destination address="0.0.0.0/0" port port="22" protocol="tcp" drop' # Inbound drop for IPv4 SSH
-        - 'rule family="ipv6" destination address="::/0" port port="22" protocol="tcp" drop' # Inbound drop for IPv6 SSH
 
         # New rules to deny OUTBOUND connections on port 22
         # Use 'reject' with 'direction="outgoing"' to explicitly deny outbound traffic.
