@@ -20,19 +20,26 @@
       ansible.builtin.command: >
         firewall-cmd --zone=public --add-rich-rule='{{ item }}' --permanent
       loop:
-        # Existing inbound drop rules (affecting incoming to test_nodes)
-        # These rules correctly block incoming traffic to these ports.
+        # Rules to drop INBOUND connections on ports 80 and 443
         - 'rule family="ipv4" destination address="0.0.0.0/0" port port="80" protocol="tcp" drop'
         - 'rule family="ipv4" destination address="0.0.0.0/0" port port="443" protocol="tcp" drop'
         - 'rule family="ipv6" destination address="::/0" port port="80" protocol="tcp" drop'
         - 'rule family="ipv6" destination address="::/0" port port="443" protocol="tcp" drop'
 
-        # Rules to deny OUTBOUND connections on port 22
-        # Using 'reject' to send a response back.
-        - 'rule family="ipv4" destination address="0.0.0.0/0" port port="22" protocol="tcp" reject'
-        - 'rule family="ipv6" destination address="::/0" port port="22" protocol="tcp" reject'
-
+        # Rules to REJECT OUTBOUND connections on port 22
+        # 'source address' refers to the source of the traffic (the test_nodes host itself in this case),
+        # 'destination address' refers to anywhere else (0.0.0.0/0 or ::/0).
+        # This rule implicitly applies to outbound connections originating from the host.
+        - 'rule family="ipv4" source address="0.0.0.0/0" destination address="0.0.0.0/0" port port="22" protocol="tcp" reject'
+        - 'rule family="ipv6" source address="::/0" destination address="::/0" port port="22" protocol="tcp" reject'
       changed_when: true
+
+    # This task ensures incoming SSH is allowed by adding the 'ssh' service.
+    # It takes precedence over general drop/reject rules for inbound traffic.
+    - name: Ensure SSH service is enabled in firewalld public zone (for incoming SSH)
+      ansible.builtin.command: firewall-cmd --zone=public --add-service=ssh --permanent
+      changed_when: true
+      ignore_errors: true # Ignore if service is already enabled
 
     - name: Reload firewalld to apply immediate changes
       ansible.builtin.command: firewall-cmd --reload
@@ -71,23 +78,15 @@
         repo: git@github.com:kersmaka/ansible.git
         dest: /tmp/ansible_repo
         accept_hostkey: yes
-        # You might need a shorter timeout here as it will likely fail fast
-        # due to the firewall.
-        timeout: 5
+        timeout: 5 # Shorter timeout as it will likely fail fast due to firewall
       register: git_clone_result
       failed_when: >
-        not git_clone_result.failed or # Mark as failed only if the module itself didn't indicate failure,
-                                      # OR if it failed, ensure it's the specific type of failure we expect.
+        not git_clone_result.failed or
         (git_clone_result.failed and
          'Permission denied' not in git_clone_result.msg and
          'Connection refused' not in git_clone_result.msg and
          'Network unreachable' not in git_clone_result.msg and
          'No route to host' not in git_clone_result.msg)
-      # This expanded condition means:
-      # "If the module itself didn't fail (i.e., it somehow succeeded when it shouldn't), mark it as failed."
-      # OR
-      # "If the module *did* fail, but the error message does NOT contain 'Permission denied', 'Connection refused', 'Network unreachable', or 'No route to host', then mark it as failed (because it's an unexpected failure)."
-      # This way, it only passes if it genuinely failed AND the failure message is one of the expected network/auth errors.
 
     - name: Display git clone result
       ansible.builtin.debug:
