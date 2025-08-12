@@ -58,11 +58,6 @@
       ansible.builtin.debug:
         var: curl_http_result
 
-    - name: Ensure git is installed
-      ansible.builtin.yum: # For RHEL/CentOS systems
-        name: git
-        state: present
-
     - name: Clone kersmaka/ansible repository
       ansible.builtin.git:
         repo: git@github.com:kersmaka/ansible.git
