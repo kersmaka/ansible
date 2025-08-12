@@ -1,6 +1,6 @@
 ---
 - name: Check ign.com with the URI module
-  hosts: test_nodes
+  hosts: testkvm08.com
   become: yes # Needed for firewalld tasks earlier
 
   tasks:
@@ -30,18 +30,30 @@
       ansible.builtin.command: firewall-cmd --reload
       changed_when: true
 
-    - name: Curl https://ign.com to verify connectivity
+    - name: Curl https://ign.com to verify connectivity (expecting refusal)
       ansible.builtin.uri:
         url: https://ign.com
         method: GET
-        status_code: 200 # Expecting a 200 OK response
-        validate_certs: yes # Recommended for production, ensures SSL cert is valid
-      register: curl_result # Register the output for debugging
-      # The 'failed_when' condition prevents the task from failing if the status code isn't 200,
-      # but still allows you to check for connectivity issues.
-      # However, for a simple curl, status_code: 200 is usually what you want.
-      # You could add 'failed_when: curl_result.status != 200' if not using status_code directly.
+        validate_certs: yes
+        timeout: 5
+      register: curl_https_result
+      failed_when: >
+        curl_https_result.status != -1 or 'Connection refused' not in curl_https_result.msg
 
-    - name: Display curl result
+    - name: Display HTTPS curl result
       ansible.builtin.debug:
-        var: curl_result
+        var: curl_https_result
+
+    - name: Curl http://ign.com to verify connectivity (expecting refusal)
+      ansible.builtin.uri:
+        url: http://ign.com # Changed to HTTP
+        method: GET
+        validate_certs: no # No certificate validation for HTTP
+        timeout: 5
+      register: curl_http_result
+      failed_when: >
+        curl_http_result.status != -1 or 'Connection refused' not in curl_http_result.msg
+
+    - name: Display HTTP curl result
+      ansible.builtin.debug:
+        var: curl_http_result
