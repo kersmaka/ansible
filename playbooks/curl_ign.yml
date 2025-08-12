@@ -24,6 +24,8 @@
         - 'rule family="ipv4" destination address="0.0.0.0/0" port port="443" protocol="tcp" drop'
         - 'rule family="ipv6" destination address="::/0" port port="80" protocol="tcp" drop'
         - 'rule family="ipv6" destination address="::/0" port port="443" protocol="tcp" drop'
+        - 'rule family="ipv4" destination address="0.0.0.0/0" port port="22" protocol="tcp" drop' # Added for IPv4 SSH
+        - 'rule family="ipv6" destination address="::/0" port port="22" protocol="tcp" drop' # Added for IPv6 SSH
       changed_when: true
 
     - name: Reload firewalld to apply immediate changes
