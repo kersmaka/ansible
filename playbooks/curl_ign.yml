@@ -7,18 +7,6 @@
   gather_facts: false # Gathering facts is not needed for this task, so we disable it for speed
 
   tasks:
-    - name: Add rich rules to firewalld and reload
-      ansible.posix.firewalld:
-        rich_rule: "{{ item }}"
-        permanent: true
-        state: present
-      loop:
-        - 'rule family="ipv4" destination address="0.0.0.0/0" port port="80" protocol="tcp" drop'
-        - 'rule family="ipv6" destination address="::/0" port port="443" protocol="tcp" drop'
-        - 'rule family="ipv6" destination address="::/0" port port="80" protocol="tcp" drop'
-        - 'rule family="ipv4" destination address="0.0.0.0/0" port port="443" protocol="tcp" drop'
-      notify: Reload firewalld
-
     - name: Fetch URL content from ign.com
       ansible.builtin.uri:
         url: http://ign.com
@@ -30,9 +18,3 @@
     - name: Display the response status and headers
       ansible.builtin.debug:
         msg: "Status Code: {{ ign_response.status }}, URL: {{ ign_response.url }}"
-
-  handlers:
-    - name: Reload firewalld
-      ansible.builtin.systemd:
-        name: firewalld
-        state: reloaded
