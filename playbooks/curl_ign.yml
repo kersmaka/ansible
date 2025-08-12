@@ -1,7 +1,7 @@
 ---
 - name: Check ign.com with the URI module
   hosts: test_nodes
-  become: yes # Needed for firewall-cmd
+  become: yes # Needed for firewalld tasks earlier
 
   tasks:
     - name: Gathering Facts
@@ -10,7 +10,7 @@
     - name: Debug Ansible Python Interpreter
       ansible.builtin.command: /usr/bin/python3 -c "import sys; print(sys.executable)"
       register: python_interpreter_path
-      changed_when: false # Prevent this debug task from showing 'changed'
+      changed_when: false
 
     - name: Display Python interpreter path
       ansible.builtin.debug:
@@ -24,8 +24,24 @@
         - 'rule family="ipv4" destination address="0.0.0.0/0" port port="443" protocol="tcp" drop'
         - 'rule family="ipv6" destination address="::/0" port port="80" protocol="tcp" drop'
         - 'rule family="ipv6" destination address="::/0" port port="443" protocol="tcp" drop'
-      changed_when: true # Explicitly mark this task as 'changed' if it runs
+      changed_when: true
 
     - name: Reload firewalld to apply immediate changes
       ansible.builtin.command: firewall-cmd --reload
-      changed_when: true # Explicitly mark this task as 'changed' if it runs
+      changed_when: true
+
+    - name: Curl https://ign.com to verify connectivity
+      ansible.builtin.uri:
+        url: https://ign.com
+        method: GET
+        status_code: 200 # Expecting a 200 OK response
+        validate_certs: yes # Recommended for production, ensures SSL cert is valid
+      register: curl_result # Register the output for debugging
+      # The 'failed_when' condition prevents the task from failing if the status code isn't 200,
+      # but still allows you to check for connectivity issues.
+      # However, for a simple curl, status_code: 200 is usually what you want.
+      # You could add 'failed_when: curl_result.status != 200' if not using status_code directly.
+
+    - name: Display curl result
+      ansible.builtin.debug:
+        var: curl_result
