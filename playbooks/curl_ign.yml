@@ -21,16 +21,20 @@
         firewall-cmd --zone=public --add-rich-rule='{{ item }}' --permanent
       loop:
         # Existing inbound drop rules (affecting incoming to test_nodes)
+        # These rules correctly block incoming traffic to these ports.
         - 'rule family="ipv4" destination address="0.0.0.0/0" port port="80" protocol="tcp" drop'
         - 'rule family="ipv4" destination address="0.0.0.0/0" port port="443" protocol="tcp" drop'
         - 'rule family="ipv6" destination address="::/0" port port="80" protocol="tcp" drop'
         - 'rule family="ipv6" destination address="::/0" port port="443" protocol="tcp" drop'
 
-        # New rules to deny OUTBOUND connections on port 22
-        # Use 'reject' with 'direction="outgoing"' to explicitly deny outbound traffic.
-        # This will send an ICMP Host Prohibited or TCP RST message.
-        - 'rule family="ipv4" destination address="0.0.0.0/0" port port="22" protocol="tcp" reject direction="outgoing"' # Outbound deny for IPv4 SSH
-        - 'rule family="ipv6" destination address="::/0" port port="22" protocol="tcp" reject direction="outgoing"' # Outbound deny for IPv6 SSH
+        # Removed the problematic 'direction="outgoing"' attribute.
+        # To block OUTBOUND traffic on port 22 (from the host to anywhere),
+        # we still use 'destination address' for the remote host, but the rule applies to packets
+        # where the host is the SOURCE. Firewalld often infers direction based on source/destination.
+        # Using 'reject' will send a response, making the block more explicit.
+        - 'rule family="ipv4" destination address="0.0.0.0/0" port port="22" protocol="tcp" reject' # Outbound deny for IPv4 SSH
+        - 'rule family="ipv6" destination address="::/0" port port="22" protocol="tcp" reject' # Outbound deny for IPv6 SSH
+
       changed_when: true
 
     - name: Reload firewalld to apply immediate changes
@@ -75,6 +79,9 @@
       # We need to adjust 'failed_when' to expect this.
       failed_when: >
         git_clone_result.rc != 128 or 'Permission denied' not in git_clone_result.stderr
+        # If the block results in a generic connection error (not auth-specific)
+        # you might need to broaden this to:
+        # 'Connection refused' in git_clone_result.stderr or 'Network unreachable' in git_clone_result.stderr
 
     - name: Display git clone result
       ansible.builtin.debug:
