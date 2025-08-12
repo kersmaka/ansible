@@ -27,15 +27,10 @@
         - 'rule family="ipv6" destination address="::/0" port port="443" protocol="tcp" drop'
 
         # Rules to REJECT OUTBOUND connections on port 22
-        # 'source address' refers to the source of the traffic (the test_nodes host itself in this case),
-        # 'destination address' refers to anywhere else (0.0.0.0/0 or ::/0).
-        # This rule implicitly applies to outbound connections originating from the host.
         - 'rule family="ipv4" source address="0.0.0.0/0" destination address="0.0.0.0/0" port port="22" protocol="tcp" reject'
         - 'rule family="ipv6" source address="::/0" destination address="::/0" port port="22" protocol="tcp" reject'
       changed_when: true
 
-    # This task ensures incoming SSH is allowed by adding the 'ssh' service.
-    # It takes precedence over general drop/reject rules for inbound traffic.
     - name: Ensure SSH service is enabled in firewalld public zone (for incoming SSH)
       ansible.builtin.command: firewall-cmd --zone=public --add-service=ssh --permanent
       changed_when: true
@@ -78,7 +73,7 @@
         repo: git@github.com:kersmaka/ansible.git
         dest: /tmp/ansible_repo
         accept_hostkey: yes
-        timeout: 5 # Shorter timeout as it will likely fail fast due to firewall
+        # Removed 'timeout: 5' as it's not a supported parameter
       register: git_clone_result
       failed_when: >
         not git_clone_result.failed or
