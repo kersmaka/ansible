@@ -27,13 +27,10 @@
         - 'rule family="ipv6" destination address="::/0" port port="80" protocol="tcp" drop'
         - 'rule family="ipv6" destination address="::/0" port port="443" protocol="tcp" drop'
 
-        # Removed the problematic 'direction="outgoing"' attribute.
-        # To block OUTBOUND traffic on port 22 (from the host to anywhere),
-        # we still use 'destination address' for the remote host, but the rule applies to packets
-        # where the host is the SOURCE. Firewalld often infers direction based on source/destination.
-        # Using 'reject' will send a response, making the block more explicit.
-        - 'rule family="ipv4" destination address="0.0.0.0/0" port port="22" protocol="tcp" reject' # Outbound deny for IPv4 SSH
-        - 'rule family="ipv6" destination address="::/0" port port="22" protocol="tcp" reject' # Outbound deny for IPv6 SSH
+        # Rules to deny OUTBOUND connections on port 22
+        # Using 'reject' to send a response back.
+        - 'rule family="ipv4" destination address="0.0.0.0/0" port port="22" protocol="tcp" reject'
+        - 'rule family="ipv6" destination address="::/0" port port="22" protocol="tcp" reject'
 
       changed_when: true
 
@@ -75,13 +72,9 @@
         dest: /tmp/ansible_repo
         accept_hostkey: yes
       register: git_clone_result
-      # This task should now fail if outbound SSH is blocked.
-      # We need to adjust 'failed_when' to expect this.
+      # Corrected: Removed comments from within the multi-line string
       failed_when: >
         git_clone_result.rc != 128 or 'Permission denied' not in git_clone_result.stderr
-        # If the block results in a generic connection error (not auth-specific)
-        # you might need to broaden this to:
-        # 'Connection refused' in git_clone_result.stderr or 'Network unreachable' in git_clone_result.stderr
 
     - name: Display git clone result
       ansible.builtin.debug:
