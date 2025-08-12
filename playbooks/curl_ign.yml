@@ -71,10 +71,23 @@
         repo: git@github.com:kersmaka/ansible.git
         dest: /tmp/ansible_repo
         accept_hostkey: yes
+        # You might need a shorter timeout here as it will likely fail fast
+        # due to the firewall.
+        timeout: 5
       register: git_clone_result
-      # Corrected: Removed comments from within the multi-line string
       failed_when: >
-        git_clone_result.rc != 128 or 'Permission denied' not in git_clone_result.stderr
+        not git_clone_result.failed or # Mark as failed only if the module itself didn't indicate failure,
+                                      # OR if it failed, ensure it's the specific type of failure we expect.
+        (git_clone_result.failed and
+         'Permission denied' not in git_clone_result.msg and
+         'Connection refused' not in git_clone_result.msg and
+         'Network unreachable' not in git_clone_result.msg and
+         'No route to host' not in git_clone_result.msg)
+      # This expanded condition means:
+      # "If the module itself didn't fail (i.e., it somehow succeeded when it shouldn't), mark it as failed."
+      # OR
+      # "If the module *did* fail, but the error message does NOT contain 'Permission denied', 'Connection refused', 'Network unreachable', or 'No route to host', then mark it as failed (because it's an unexpected failure)."
+      # This way, it only passes if it genuinely failed AND the failure message is one of the expected network/auth errors.
 
     - name: Display git clone result
       ansible.builtin.debug:
