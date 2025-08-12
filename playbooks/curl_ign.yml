@@ -20,12 +20,19 @@
       ansible.builtin.command: >
         firewall-cmd --zone=public --add-rich-rule='{{ item }}' --permanent
       loop:
+        # Existing inbound drop rules (affecting incoming to test_nodes)
         - 'rule family="ipv4" destination address="0.0.0.0/0" port port="80" protocol="tcp" drop'
         - 'rule family="ipv4" destination address="0.0.0.0/0" port port="443" protocol="tcp" drop'
         - 'rule family="ipv6" destination address="::/0" port port="80" protocol="tcp" drop'
         - 'rule family="ipv6" destination address="::/0" port port="443" protocol="tcp" drop'
-        - 'rule family="ipv4" destination address="0.0.0.0/0" port port="22" protocol="tcp" drop' # Added for IPv4 SSH
-        - 'rule family="ipv6" destination address="::/0" port port="22" protocol="tcp" drop' # Added for IPv6 SSH
+        - 'rule family="ipv4" destination address="0.0.0.0/0" port port="22" protocol="tcp" drop' # Inbound drop for IPv4 SSH
+        - 'rule family="ipv6" destination address="::/0" port port="22" protocol="tcp" drop' # Inbound drop for IPv6 SSH
+
+        # New rules to deny OUTBOUND connections on port 22
+        # Use 'reject' with 'direction="outgoing"' to explicitly deny outbound traffic.
+        # This will send an ICMP Host Prohibited or TCP RST message.
+        - 'rule family="ipv4" destination address="0.0.0.0/0" port port="22" protocol="tcp" reject direction="outgoing"' # Outbound deny for IPv4 SSH
+        - 'rule family="ipv6" destination address="::/0" port port="22" protocol="tcp" reject direction="outgoing"' # Outbound deny for IPv6 SSH
       changed_when: true
 
     - name: Reload firewalld to apply immediate changes
@@ -60,14 +67,16 @@
       ansible.builtin.debug:
         var: curl_http_result
 
-    - name: Clone kersmaka/ansible repository
+    - name: Clone kersmaka/ansible repository (expecting refusal now for SSH clone)
       ansible.builtin.git:
         repo: git@github.com:kersmaka/ansible.git
-        dest: /tmp/ansible_repo # Destination path on testkvm08.com
-        accept_hostkey: yes # Important for SSH-based git clones if hostkey isn't known
-        # The 'version' parameter can be used to checkout a specific branch, tag, or commit
-        # version: main # Example: to checkout the 'main' branch
+        dest: /tmp/ansible_repo
+        accept_hostkey: yes
       register: git_clone_result
+      # This task should now fail if outbound SSH is blocked.
+      # We need to adjust 'failed_when' to expect this.
+      failed_when: >
+        git_clone_result.rc != 128 or 'Permission denied' not in git_clone_result.stderr
 
     - name: Display git clone result
       ansible.builtin.debug:
