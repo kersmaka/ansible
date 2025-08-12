@@ -1,7 +1,7 @@
 ---
 - name: Check ign.com with the URI module
   hosts: test_nodes # Or whatever group testkvm08.com is in
-  gather_facts: false # Or true if you need other facts
+  gather_facts: true # Or true if you need other facts
 
   tasks:
     - name: Debug Ansible Python Interpreter
