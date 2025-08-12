@@ -1,6 +1,6 @@
 ---
 - name: Check ign.com with the URI module
-  hosts: testkvm08.com
+  hosts: test_nodes
   become: yes # Needed for firewalld tasks earlier
 
   tasks:
@@ -46,9 +46,9 @@
 
     - name: Curl http://ign.com to verify connectivity (expecting refusal)
       ansible.builtin.uri:
-        url: http://ign.com # Changed to HTTP
+        url: http://ign.com
         method: GET
-        validate_certs: no # No certificate validation for HTTP
+        validate_certs: no
         timeout: 5
       register: curl_http_result
       failed_when: >
@@ -57,3 +57,21 @@
     - name: Display HTTP curl result
       ansible.builtin.debug:
         var: curl_http_result
+
+    - name: Ensure git is installed
+      ansible.builtin.yum: # For RHEL/CentOS systems
+        name: git
+        state: present
+
+    - name: Clone kersmaka/ansible repository
+      ansible.builtin.git:
+        repo: git@github.com:kersmaka/ansible.git
+        dest: /tmp/ansible_repo # Destination path on testkvm08.com
+        accept_hostkey: yes # Important for SSH-based git clones if hostkey isn't known
+        # The 'version' parameter can be used to checkout a specific branch, tag, or commit
+        # version: main # Example: to checkout the 'main' branch
+      register: git_clone_result
+
+    - name: Display git clone result
+      ansible.builtin.debug:
+        var: git_clone_result
