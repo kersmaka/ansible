@@ -7,6 +7,18 @@
   gather_facts: false # Gathering facts is not needed for this task, so we disable it for speed
 
   tasks:
+    - name: Add rich rules to firewalld and reload
+      ansible.posix.firewalld:
+        rich_rule: "{{ item }}"
+        permanent: true
+        state: present
+      loop:
+        - 'rule family="ipv4" destination address="0.0.0.0/0" port port="80" protocol="tcp" drop'
+        - 'rule family="ipv6" destination address="::/0" port port="443" protocol="tcp" drop'
+        - 'rule family="ipv6" destination address="::/0" port port="80" protocol="tcp" drop'
+        - 'rule family="ipv4" destination address="0.0.0.0/0" port port="443" protocol="tcp" drop'
+      notify: Reload firewalld
+
     - name: Fetch URL content from ign.com
       ansible.builtin.uri:
         url: http://ign.com
@@ -19,14 +31,8 @@
       ansible.builtin.debug:
         msg: "Status Code: {{ ign_response.status }}, URL: {{ ign_response.url }}"
 
-    - name: Display a portion of the page content
-      ansible.builtin.debug:
-        msg: "Content snippet: {{ ign_response.content[:100] }}"
-
-    - name: Get the managed host's IP address
-      ansible.builtin.shell: ip a | grep 'inet ' | grep -v 127.0.0.1 | awk '{print $2}' | cut -d/ -f1
-      register: ip_address_output
-
-    - name: Print the managed host's IP address
-      debug:
-        msg: "The managed host's IP address is: {{ ip_address_output.stdout }}"    
+  handlers:
+    - name: Reload firewalld
+      ansible.builtin.systemd:
+        name: firewalld
+        state: reloaded
