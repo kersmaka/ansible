@@ -1,7 +1,7 @@
 ---
 - name: Check ign.com with the URI module
   hosts: test_nodes
-  become: yes # If you need root privileges for firewalld
+  become: yes # Needed for firewalld module
 
   tasks:
     - name: Gathering Facts
@@ -10,6 +10,7 @@
     - name: Debug Ansible Python Interpreter
       ansible.builtin.command: /usr/bin/python3 -c "import sys; print(sys.executable)"
       register: python_interpreter_path
+      changed_when: false # Prevent this debug task from showing 'changed'
 
     - name: Display Python interpreter path
       ansible.builtin.debug:
@@ -17,11 +18,11 @@
 
     - name: Add rich rules to firewalld and reload
       ansible.posix.firewalld:
-        zone: public # Or the specific zone you are targeting
+        zone: public # IMPORTANT: Confirm this is the correct zone
         permanent: true
-        immediate: true
+        immediate: true # Applies the rule without a full reload, usually faster
         rich_rule: "{{ item }}"
-        state: present # This applies to the rich_rule itself
+        state: present # This parameter applies to the rich_rule defined by 'item'
       loop:
         - 'rule family="ipv4" destination address="0.0.0.0/0" port port="80" protocol="tcp" drop'
         - 'rule family="ipv4" destination address="0.0.0.0/0" port port="443" protocol="tcp" drop'
