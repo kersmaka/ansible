@@ -1,32 +1,29 @@
 ---
 - name: Check ign.com with the URI module
-  hosts: test_nodes # Or whatever group testkvm08.com is in
-  gather_facts: true # Or true if you need other facts
+  hosts: test_nodes
+  become: yes # If you need root privileges for firewalld
 
   tasks:
+    - name: Gathering Facts
+      ansible.builtin.setup:
+
     - name: Debug Ansible Python Interpreter
-      ansible.builtin.command: "{{ ansible_python_interpreter }} -c 'import sys; print(sys.executable)'"
-      register: python_path_debug
-      delegate_to: testkvm08.com # Ensure this runs on the target
-      run_once: true # Only run once if multiple hosts in group
-      changed_when: false
-      failed_when: false # Don't fail the playbook if this task fails
+      ansible.builtin.command: /usr/bin/python3 -c "import sys; print(sys.executable)"
+      register: python_interpreter_path
 
     - name: Display Python interpreter path
       ansible.builtin.debug:
-        msg: "Ansible is attempting to use Python: {{ python_path_debug.stdout }}"
-      when: python_path_debug.stdout is defined
+        msg: "Ansible is attempting to use Python: {{ python_interpreter_path.stdout }}"
 
     - name: Add rich rules to firewalld and reload
       ansible.posix.firewalld:
-        rich_rule: "{{ item }}"
+        zone: public # Or the specific zone you are targeting
         permanent: true
-        state: present
+        immediate: true
+        rich_rule: "{{ item }}"
+        state: present # This applies to the rich_rule itself
       loop:
-        - rule family="ipv4" destination address="0.0.0.0/0" port port="80" protocol="tcp" drop
-        - rule family="ipv6" destination address="::/0" port port="443" protocol="tcp" drop
-        - rule family="ipv6" destination address="::/0" port port="80" protocol="tcp" drop
-        - rule family="ipv4" destination address="0.0.0.0/0" port port="443" protocol="tcp" drop
-      become: true
-      # The 'state: reloaded' is for the firewalld service itself, not the module dependency
-      notify: Reload firewalld
+        - 'rule family="ipv4" destination address="0.0.0.0/0" port port="80" protocol="tcp" drop'
+        - 'rule family="ipv4" destination address="0.0.0.0/0" port port="443" protocol="tcp" drop'
+        - 'rule family="ipv6" destination address="::/0" port port="80" protocol="tcp" drop'
+        - 'rule family="ipv6" destination address="::/0" port port="443" protocol="tcp" drop'
