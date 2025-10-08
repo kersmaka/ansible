@@ -34,16 +34,14 @@
     - name: Configure the image
       command: |
         virt-customize -a {{ libvirt_pool_dir }}/{{ vm_name }}.qcow2 \
-        --hostname {{ vm_name }} \
-        --root-password password:{{ vm_root_pass }} \
-        --ssh-inject 'root:file:{{ ssh_key }}' \
-        --uninstall cloud-init 
-        --run-command 'sed -i "s/^#\?PermitRootLogin.*/PermitRootLogin yes/" /etc/ssh/sshd_config'
-        --run-command 'sed -i "s/^#\?PasswordAuthentication.*/PasswordAuthentication yes/" /etc/ssh/sshd_config'
-        --run-command "restorecon -Rv /etc/ssh"
-        --run-command "restorecon -Rv /root/.ssh"
-        --run-command "restorecon -Rv /"
-        --selinux-relabel
+          --hostname {{ vm_name }} \
+          --root-password password:{{ vm_root_pass }} \
+          --ssh-inject 'root:file:{{ ssh_key }}' \
+          --uninstall cloud-init \
+          --run-command 'sed -i "s/^#\?PermitRootLogin.*/PermitRootLogin yes/" /etc/ssh/sshd_config' \
+          --run-command 'sed -i "s/^#\?PasswordAuthentication.*/PasswordAuthentication yes/" /etc/ssh/sshd_config' \
+          --run-command 'sed -i "s/^SELINUX=enforcing/SELINUX=disabled/" /etc/selinux/config' \
+          --selinux-relabel
 
       #when: copy_results is changed
 
