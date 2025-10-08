@@ -1,0 +1,390 @@
+ansible-playbook [core 2.14.18]
+  config file = None
+  configured module search path = ['/root/.ansible/plugins/modules', '/usr/share/ansible/plugins/modules']
+  ansible python module location = /usr/lib/python3/dist-packages/ansible
+  ansible collection location = /root/.ansible/collections:/usr/share/ansible/collections
+  executable location = /usr/bin/ansible-playbook
+  python version = 3.11.2 (main, Apr 28 2025, 14:11:48) [GCC 12.2.0] (/usr/bin/python3)
+  jinja version = 3.1.2
+  libyaml = True
+No config file found; using defaults
+host_list declined parsing /etc/ansible/hosts as it did not pass its verify_file() method
+Skipping due to inventory source not existing or not being readable by the current user
+script declined parsing /etc/ansible/hosts as it did not pass its verify_file() method
+auto declined parsing /etc/ansible/hosts as it did not pass its verify_file() method
+Skipping due to inventory source not existing or not being readable by the current user
+yaml declined parsing /etc/ansible/hosts as it did not pass its verify_file() method
+Skipping due to inventory source not existing or not being readable by the current user
+ini declined parsing /etc/ansible/hosts as it did not pass its verify_file() method
+Skipping due to inventory source not existing or not being readable by the current user
+toml declined parsing /etc/ansible/hosts as it did not pass its verify_file() method
+Skipping callback 'default', as we already have a stdout callback.
+Skipping callback 'minimal', as we already have a stdout callback.
+Skipping callback 'oneline', as we already have a stdout callback.
+
+PLAYBOOK: kvm_provision.yaml ***************************************************
+1 plays in kvm_provision.yaml
+
+PLAY [Deploys VM based on cloud image] *****************************************
+
+TASK [Gathering Facts] *********************************************************
+task path: /home/kersmaka/github/ansible/kvmlab/kvm_provision.yaml:1
+<127.0.0.1> ESTABLISH LOCAL CONNECTION FOR USER: root
+<127.0.0.1> EXEC /bin/sh -c 'echo ~root && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c '( umask 77 && mkdir -p "` echo /root/.ansible/tmp `"&& mkdir "` echo /root/.ansible/tmp/ansible-tmp-1759948438.8202727-59136-112552810536894 `" && echo ansible-tmp-1759948438.8202727-59136-112552810536894="` echo /root/.ansible/tmp/ansible-tmp-1759948438.8202727-59136-112552810536894 `" ) && sleep 0'
+Using module file /usr/lib/python3/dist-packages/ansible/modules/setup.py
+<127.0.0.1> PUT /root/.ansible/tmp/ansible-local-59132a1emwgy9/tmpx72qvme2 TO /root/.ansible/tmp/ansible-tmp-1759948438.8202727-59136-112552810536894/AnsiballZ_setup.py
+<127.0.0.1> EXEC /bin/sh -c 'chmod u+x /root/.ansible/tmp/ansible-tmp-1759948438.8202727-59136-112552810536894/ /root/.ansible/tmp/ansible-tmp-1759948438.8202727-59136-112552810536894/AnsiballZ_setup.py && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c '/usr/bin/python3 /root/.ansible/tmp/ansible-tmp-1759948438.8202727-59136-112552810536894/AnsiballZ_setup.py && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c 'rm -f -r /root/.ansible/tmp/ansible-tmp-1759948438.8202727-59136-112552810536894/ > /dev/null 2>&1 && sleep 0'
+ok: [localhost]
+
+TASK [KVM Provision role] ******************************************************
+task path: /home/kersmaka/github/ansible/kvmlab/kvm_provision.yaml:15
+
+TASK [kvm_provision : Ensure requirements in place] ****************************
+task path: /home/kersmaka/github/ansible/kvmlab/roles/kvm_provision/tasks/main.yml:3
+<127.0.0.1> ESTABLISH LOCAL CONNECTION FOR USER: root
+<127.0.0.1> EXEC /bin/sh -c 'echo ~root && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c '( umask 77 && mkdir -p "` echo /root/.ansible/tmp `"&& mkdir "` echo /root/.ansible/tmp/ansible-tmp-1759948440.1997974-59235-16023850874781 `" && echo ansible-tmp-1759948440.1997974-59235-16023850874781="` echo /root/.ansible/tmp/ansible-tmp-1759948440.1997974-59235-16023850874781 `" ) && sleep 0'
+Using module file /usr/lib/python3/dist-packages/ansible/modules/apt.py
+<127.0.0.1> PUT /root/.ansible/tmp/ansible-local-59132a1emwgy9/tmpnfk7n35s TO /root/.ansible/tmp/ansible-tmp-1759948440.1997974-59235-16023850874781/AnsiballZ_apt.py
+<127.0.0.1> EXEC /bin/sh -c 'chmod u+x /root/.ansible/tmp/ansible-tmp-1759948440.1997974-59235-16023850874781/ /root/.ansible/tmp/ansible-tmp-1759948440.1997974-59235-16023850874781/AnsiballZ_apt.py && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c '/usr/bin/python3 /root/.ansible/tmp/ansible-tmp-1759948440.1997974-59235-16023850874781/AnsiballZ_apt.py && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c 'rm -f -r /root/.ansible/tmp/ansible-tmp-1759948440.1997974-59235-16023850874781/ > /dev/null 2>&1 && sleep 0'
+ok: [localhost] => {
+    "cache_update_time": 1759943591,
+    "cache_updated": false,
+    "changed": false,
+    "invocation": {
+        "module_args": {
+            "allow_change_held_packages": false,
+            "allow_downgrade": false,
+            "allow_unauthenticated": false,
+            "autoclean": false,
+            "autoremove": false,
+            "cache_valid_time": 0,
+            "clean": false,
+            "deb": null,
+            "default_release": null,
+            "dpkg_options": "force-confdef,force-confold",
+            "fail_on_autoremove": false,
+            "force": false,
+            "force_apt_get": false,
+            "install_recommends": null,
+            "lock_timeout": 60,
+            "name": [
+                "guestfs-tools",
+                "python3-libvirt"
+            ],
+            "only_upgrade": false,
+            "package": [
+                "guestfs-tools",
+                "python3-libvirt"
+            ],
+            "policy_rc_d": null,
+            "purge": false,
+            "state": "present",
+            "update_cache": null,
+            "update_cache_retries": 5,
+            "update_cache_retry_max_delay": 12,
+            "upgrade": null
+        }
+    }
+}
+
+TASK [kvm_provision : Get VMs list] ********************************************
+task path: /home/kersmaka/github/ansible/kvmlab/roles/kvm_provision/tasks/main.yml:11
+<127.0.0.1> ESTABLISH LOCAL CONNECTION FOR USER: root
+<127.0.0.1> EXEC /bin/sh -c 'echo ~root && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c '( umask 77 && mkdir -p "` echo /root/.ansible/tmp `"&& mkdir "` echo /root/.ansible/tmp/ansible-tmp-1759948441.112792-59267-82684511780917 `" && echo ansible-tmp-1759948441.112792-59267-82684511780917="` echo /root/.ansible/tmp/ansible-tmp-1759948441.112792-59267-82684511780917 `" ) && sleep 0'
+Using module file /root/.ansible/collections/ansible_collections/community/libvirt/plugins/modules/virt.py
+<127.0.0.1> PUT /root/.ansible/tmp/ansible-local-59132a1emwgy9/tmp7g9tsuga TO /root/.ansible/tmp/ansible-tmp-1759948441.112792-59267-82684511780917/AnsiballZ_virt.py
+<127.0.0.1> EXEC /bin/sh -c 'chmod u+x /root/.ansible/tmp/ansible-tmp-1759948441.112792-59267-82684511780917/ /root/.ansible/tmp/ansible-tmp-1759948441.112792-59267-82684511780917/AnsiballZ_virt.py && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c '/usr/bin/python3 /root/.ansible/tmp/ansible-tmp-1759948441.112792-59267-82684511780917/AnsiballZ_virt.py && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c 'rm -f -r /root/.ansible/tmp/ansible-tmp-1759948441.112792-59267-82684511780917/ > /dev/null 2>&1 && sleep 0'
+ok: [localhost] => {
+    "changed": false,
+    "invocation": {
+        "module_args": {
+            "autostart": null,
+            "command": "list_vms",
+            "flags": null,
+            "force": null,
+            "mutate_flags": [
+                "ADD_UUID"
+            ],
+            "name": null,
+            "state": null,
+            "uri": "qemu:///system",
+            "xml": null
+        }
+    },
+    "list_vms": [
+        "foreman04",
+        "foremanCapsule01",
+        "foreman02",
+        "forman-rhel89",
+        "foreman",
+        "rhel9",
+        "rhel9-FRESH-clone",
+        "jira",
+        "foreman03",
+        "proxy-server.com",
+        "ansible",
+        "foreman05",
+        "f34-lab01"
+    ]
+}
+
+TASK [kvm_provision : Download base image] *************************************
+task path: /home/kersmaka/github/ansible/kvmlab/roles/kvm_provision/tasks/main.yml:19
+<127.0.0.1> ESTABLISH LOCAL CONNECTION FOR USER: root
+<127.0.0.1> EXEC /bin/sh -c 'echo ~root && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c '( umask 77 && mkdir -p "` echo /root/.ansible/tmp `"&& mkdir "` echo /root/.ansible/tmp/ansible-tmp-1759948441.5141613-59294-276647240541214 `" && echo ansible-tmp-1759948441.5141613-59294-276647240541214="` echo /root/.ansible/tmp/ansible-tmp-1759948441.5141613-59294-276647240541214 `" ) && sleep 0'
+Using module file /usr/lib/python3/dist-packages/ansible/modules/get_url.py
+<127.0.0.1> PUT /root/.ansible/tmp/ansible-local-59132a1emwgy9/tmp4b5ii4s4 TO /root/.ansible/tmp/ansible-tmp-1759948441.5141613-59294-276647240541214/AnsiballZ_get_url.py
+<127.0.0.1> EXEC /bin/sh -c 'chmod u+x /root/.ansible/tmp/ansible-tmp-1759948441.5141613-59294-276647240541214/ /root/.ansible/tmp/ansible-tmp-1759948441.5141613-59294-276647240541214/AnsiballZ_get_url.py && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c '/usr/bin/python3 /root/.ansible/tmp/ansible-tmp-1759948441.5141613-59294-276647240541214/AnsiballZ_get_url.py && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c 'rm -f -r /root/.ansible/tmp/ansible-tmp-1759948441.5141613-59294-276647240541214/ > /dev/null 2>&1 && sleep 0'
+ok: [localhost] => {
+    "changed": false,
+    "checksum_dest": null,
+    "checksum_src": null,
+    "dest": "/tmp/Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2",
+    "elapsed": 0,
+    "gid": 0,
+    "group": "root",
+    "invocation": {
+        "module_args": {
+            "attributes": null,
+            "backup": false,
+            "checksum": "sha256:e401a4db2e5e04d1967b6729774faa96da629bcf3ba90b67d8d9cce9906bec0f",
+            "ciphers": null,
+            "client_cert": null,
+            "client_key": null,
+            "decompress": true,
+            "dest": "/tmp/Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2",
+            "force": false,
+            "force_basic_auth": false,
+            "group": null,
+            "headers": null,
+            "http_agent": "ansible-httpget",
+            "mode": null,
+            "owner": null,
+            "selevel": null,
+            "serole": null,
+            "setype": null,
+            "seuser": null,
+            "timeout": 10,
+            "tmp_dest": null,
+            "unredirected_headers": [],
+            "unsafe_writes": false,
+            "url": "https://download.fedoraproject.org/pub/fedora/linux/releases/42/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2",
+            "url_password": null,
+            "url_username": null,
+            "use_gssapi": false,
+            "use_netrc": true,
+            "use_proxy": true,
+            "validate_certs": true
+        }
+    },
+    "mode": "0644",
+    "msg": "file already exists",
+    "owner": "root",
+    "size": 532217856,
+    "state": "file",
+    "uid": 0,
+    "url": "https://download.fedoraproject.org/pub/fedora/linux/releases/42/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2"
+}
+
+TASK [kvm_provision : Copy base image to libvirt directory] ********************
+task path: /home/kersmaka/github/ansible/kvmlab/roles/kvm_provision/tasks/main.yml:25
+<127.0.0.1> ESTABLISH LOCAL CONNECTION FOR USER: root
+<127.0.0.1> EXEC /bin/sh -c 'echo ~root && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c '( umask 77 && mkdir -p "` echo /root/.ansible/tmp `"&& mkdir "` echo /root/.ansible/tmp/ansible-tmp-1759948442.3019776-59320-177411968354745 `" && echo ansible-tmp-1759948442.3019776-59320-177411968354745="` echo /root/.ansible/tmp/ansible-tmp-1759948442.3019776-59320-177411968354745 `" ) && sleep 0'
+Using module file /usr/lib/python3/dist-packages/ansible/modules/copy.py
+<127.0.0.1> PUT /root/.ansible/tmp/ansible-local-59132a1emwgy9/tmpdnu2uf9o TO /root/.ansible/tmp/ansible-tmp-1759948442.3019776-59320-177411968354745/AnsiballZ_copy.py
+<127.0.0.1> EXEC /bin/sh -c 'chmod u+x /root/.ansible/tmp/ansible-tmp-1759948442.3019776-59320-177411968354745/ /root/.ansible/tmp/ansible-tmp-1759948442.3019776-59320-177411968354745/AnsiballZ_copy.py && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c '/usr/bin/python3 /root/.ansible/tmp/ansible-tmp-1759948442.3019776-59320-177411968354745/AnsiballZ_copy.py && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c 'rm -f -r /root/.ansible/tmp/ansible-tmp-1759948442.3019776-59320-177411968354745/ > /dev/null 2>&1 && sleep 0'
+ok: [localhost] => {
+    "changed": false,
+    "dest": "/var/lib/libvirt/images/f34-lab01.qcow2",
+    "gid": 0,
+    "group": "root",
+    "invocation": {
+        "module_args": {
+            "_original_basename": null,
+            "attributes": null,
+            "backup": false,
+            "checksum": null,
+            "content": null,
+            "dest": "/var/lib/libvirt/images/f34-lab01.qcow2",
+            "directory_mode": null,
+            "follow": false,
+            "force": false,
+            "group": null,
+            "local_follow": null,
+            "mode": 432,
+            "owner": null,
+            "remote_src": true,
+            "selevel": null,
+            "serole": null,
+            "setype": null,
+            "seuser": null,
+            "src": "/tmp/Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2",
+            "unsafe_writes": false,
+            "validate": null
+        }
+    },
+    "mode": "0660",
+    "msg": "file already exists",
+    "owner": "root",
+    "size": 534380544,
+    "src": "/tmp/Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2",
+    "state": "file",
+    "uid": 0
+}
+
+TASK [kvm_provision : Configure the image] *************************************
+task path: /home/kersmaka/github/ansible/kvmlab/roles/kvm_provision/tasks/main.yml:34
+skipping: [localhost] => {
+    "changed": false,
+    "skip_reason": "Conditional result was False"
+}
+
+TASK [kvm_provision : Define vm] ***********************************************
+task path: /home/kersmaka/github/ansible/kvmlab/roles/kvm_provision/tasks/main.yml:43
+skipping: [localhost] => {
+    "changed": false,
+    "skip_reason": "Conditional result was False"
+}
+
+TASK [kvm_provision : Ensure VM is started] ************************************
+task path: /home/kersmaka/github/ansible/kvmlab/roles/kvm_provision/tasks/main.yml:50
+<127.0.0.1> ESTABLISH LOCAL CONNECTION FOR USER: root
+<127.0.0.1> EXEC /bin/sh -c 'echo ~root && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c '( umask 77 && mkdir -p "` echo /root/.ansible/tmp `"&& mkdir "` echo /root/.ansible/tmp/ansible-tmp-1759948443.8440256-59350-93912398853418 `" && echo ansible-tmp-1759948443.8440256-59350-93912398853418="` echo /root/.ansible/tmp/ansible-tmp-1759948443.8440256-59350-93912398853418 `" ) && sleep 0'
+Using module file /root/.ansible/collections/ansible_collections/community/libvirt/plugins/modules/virt.py
+<127.0.0.1> PUT /root/.ansible/tmp/ansible-local-59132a1emwgy9/tmpr2qc66a_ TO /root/.ansible/tmp/ansible-tmp-1759948443.8440256-59350-93912398853418/AnsiballZ_virt.py
+<127.0.0.1> EXEC /bin/sh -c 'chmod u+x /root/.ansible/tmp/ansible-tmp-1759948443.8440256-59350-93912398853418/ /root/.ansible/tmp/ansible-tmp-1759948443.8440256-59350-93912398853418/AnsiballZ_virt.py && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c '/usr/bin/python3 /root/.ansible/tmp/ansible-tmp-1759948443.8440256-59350-93912398853418/AnsiballZ_virt.py && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c 'rm -f -r /root/.ansible/tmp/ansible-tmp-1759948443.8440256-59350-93912398853418/ > /dev/null 2>&1 && sleep 0'
+FAILED - RETRYING: [localhost]: Ensure VM is started (3 retries left).Result was: {
+    "attempts": 1,
+    "changed": false,
+    "invocation": {
+        "module_args": {
+            "autostart": null,
+            "command": null,
+            "flags": null,
+            "force": null,
+            "mutate_flags": [
+                "ADD_UUID"
+            ],
+            "name": "f34-lab01",
+            "state": "running",
+            "uri": "qemu:///system",
+            "xml": null
+        }
+    },
+    "msg": "Requested operation is not valid: network 'default' is not active",
+    "retries": 4
+}
+<127.0.0.1> EXEC /bin/sh -c 'echo ~root && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c '( umask 77 && mkdir -p "` echo /root/.ansible/tmp `"&& mkdir "` echo /root/.ansible/tmp/ansible-tmp-1759948446.6568203-59350-160217787360538 `" && echo ansible-tmp-1759948446.6568203-59350-160217787360538="` echo /root/.ansible/tmp/ansible-tmp-1759948446.6568203-59350-160217787360538 `" ) && sleep 0'
+Using module file /root/.ansible/collections/ansible_collections/community/libvirt/plugins/modules/virt.py
+<127.0.0.1> PUT /root/.ansible/tmp/ansible-local-59132a1emwgy9/tmpmmgwl9n9 TO /root/.ansible/tmp/ansible-tmp-1759948446.6568203-59350-160217787360538/AnsiballZ_virt.py
+<127.0.0.1> EXEC /bin/sh -c 'chmod u+x /root/.ansible/tmp/ansible-tmp-1759948446.6568203-59350-160217787360538/ /root/.ansible/tmp/ansible-tmp-1759948446.6568203-59350-160217787360538/AnsiballZ_virt.py && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c '/usr/bin/python3 /root/.ansible/tmp/ansible-tmp-1759948446.6568203-59350-160217787360538/AnsiballZ_virt.py && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c 'rm -f -r /root/.ansible/tmp/ansible-tmp-1759948446.6568203-59350-160217787360538/ > /dev/null 2>&1 && sleep 0'
+FAILED - RETRYING: [localhost]: Ensure VM is started (2 retries left).Result was: {
+    "attempts": 2,
+    "changed": false,
+    "invocation": {
+        "module_args": {
+            "autostart": null,
+            "command": null,
+            "flags": null,
+            "force": null,
+            "mutate_flags": [
+                "ADD_UUID"
+            ],
+            "name": "f34-lab01",
+            "state": "running",
+            "uri": "qemu:///system",
+            "xml": null
+        }
+    },
+    "msg": "Requested operation is not valid: network 'default' is not active",
+    "retries": 4
+}
+<127.0.0.1> EXEC /bin/sh -c 'echo ~root && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c '( umask 77 && mkdir -p "` echo /root/.ansible/tmp `"&& mkdir "` echo /root/.ansible/tmp/ansible-tmp-1759948449.5249367-59350-153641094558401 `" && echo ansible-tmp-1759948449.5249367-59350-153641094558401="` echo /root/.ansible/tmp/ansible-tmp-1759948449.5249367-59350-153641094558401 `" ) && sleep 0'
+Using module file /root/.ansible/collections/ansible_collections/community/libvirt/plugins/modules/virt.py
+<127.0.0.1> PUT /root/.ansible/tmp/ansible-local-59132a1emwgy9/tmpg27ekrem TO /root/.ansible/tmp/ansible-tmp-1759948449.5249367-59350-153641094558401/AnsiballZ_virt.py
+<127.0.0.1> EXEC /bin/sh -c 'chmod u+x /root/.ansible/tmp/ansible-tmp-1759948449.5249367-59350-153641094558401/ /root/.ansible/tmp/ansible-tmp-1759948449.5249367-59350-153641094558401/AnsiballZ_virt.py && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c '/usr/bin/python3 /root/.ansible/tmp/ansible-tmp-1759948449.5249367-59350-153641094558401/AnsiballZ_virt.py && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c 'rm -f -r /root/.ansible/tmp/ansible-tmp-1759948449.5249367-59350-153641094558401/ > /dev/null 2>&1 && sleep 0'
+FAILED - RETRYING: [localhost]: Ensure VM is started (1 retries left).Result was: {
+    "attempts": 3,
+    "changed": false,
+    "invocation": {
+        "module_args": {
+            "autostart": null,
+            "command": null,
+            "flags": null,
+            "force": null,
+            "mutate_flags": [
+                "ADD_UUID"
+            ],
+            "name": "f34-lab01",
+            "state": "running",
+            "uri": "qemu:///system",
+            "xml": null
+        }
+    },
+    "msg": "Requested operation is not valid: network 'default' is not active",
+    "retries": 4
+}
+<127.0.0.1> EXEC /bin/sh -c 'echo ~root && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c '( umask 77 && mkdir -p "` echo /root/.ansible/tmp `"&& mkdir "` echo /root/.ansible/tmp/ansible-tmp-1759948452.3000095-59350-103975612811343 `" && echo ansible-tmp-1759948452.3000095-59350-103975612811343="` echo /root/.ansible/tmp/ansible-tmp-1759948452.3000095-59350-103975612811343 `" ) && sleep 0'
+Using module file /root/.ansible/collections/ansible_collections/community/libvirt/plugins/modules/virt.py
+<127.0.0.1> PUT /root/.ansible/tmp/ansible-local-59132a1emwgy9/tmpyiz1v3w8 TO /root/.ansible/tmp/ansible-tmp-1759948452.3000095-59350-103975612811343/AnsiballZ_virt.py
+<127.0.0.1> EXEC /bin/sh -c 'chmod u+x /root/.ansible/tmp/ansible-tmp-1759948452.3000095-59350-103975612811343/ /root/.ansible/tmp/ansible-tmp-1759948452.3000095-59350-103975612811343/AnsiballZ_virt.py && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c '/usr/bin/python3 /root/.ansible/tmp/ansible-tmp-1759948452.3000095-59350-103975612811343/AnsiballZ_virt.py && sleep 0'
+<127.0.0.1> EXEC /bin/sh -c 'rm -f -r /root/.ansible/tmp/ansible-tmp-1759948452.3000095-59350-103975612811343/ > /dev/null 2>&1 && sleep 0'
+The full traceback is:
+Traceback (most recent call last):
+  File "/tmp/ansible_community.libvirt.virt_payload_lqt7avez/ansible_community.libvirt.virt_payload.zip/ansible_collections/community/libvirt/plugins/modules/virt.py", line 920, in main
+  File "/tmp/ansible_community.libvirt.virt_payload_lqt7avez/ansible_community.libvirt.virt_payload.zip/ansible_collections/community/libvirt/plugins/modules/virt.py", line 821, in core
+  File "/tmp/ansible_community.libvirt.virt_payload_lqt7avez/ansible_community.libvirt.virt_payload.zip/ansible_collections/community/libvirt/plugins/modules/virt.py", line 495, in start
+  File "/tmp/ansible_community.libvirt.virt_payload_lqt7avez/ansible_community.libvirt.virt_payload.zip/ansible_collections/community/libvirt/plugins/modules/virt.py", line 271, in create
+  File "/usr/lib/python3/dist-packages/libvirt.py", line 1373, in create
+    raise libvirtError('virDomainCreate() failed')
+libvirt.libvirtError: Requested operation is not valid: network 'default' is not active
+fatal: [localhost]: FAILED! => {
+    "attempts": 3,
+    "changed": false,
+    "invocation": {
+        "module_args": {
+            "autostart": null,
+            "command": null,
+            "flags": null,
+            "force": null,
+            "mutate_flags": [
+                "ADD_UUID"
+            ],
+            "name": "f34-lab01",
+            "state": "running",
+            "uri": "qemu:///system",
+            "xml": null
+        }
+    },
+    "msg": "Requested operation is not valid: network 'default' is not active"
+}
+
+PLAY RECAP *********************************************************************
+localhost                  : ok=5    changed=0    unreachable=0    failed=1    skipped=2    rescued=0    ignored=0   
+
