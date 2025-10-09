@@ -14,6 +14,12 @@
   register: existing_vms
   changed_when: no
 
+- name: Set base image variables based on selected OS
+  set_fact:
+    base_image_name: "{{ os_images[vm_os].image_name }}"
+    base_image_url: "{{ os_images[vm_os].image_url }}"
+    base_image_sha: "{{ os_images[vm_os].image_sha }}"
+
 - name: Create VM if not exists
   block:
     - name: Download base image
@@ -21,6 +27,7 @@
         url: "{{ base_image_url }}"
         dest: "/tmp/{{ base_image_name }}"
         checksum: "sha256:{{ base_image_sha }}"
+        #checksum: no
 
     - name: Copy base image to libvirt directory
       copy:

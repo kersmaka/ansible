@@ -1,9 +1,24 @@
 ---
 # defaults file for kvm_provision
-base_image_name: Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2
-base_image_url: https://download.fedoraproject.org/pub/fedora/linux/releases/42/Cloud/x86_64/images/{{ base_image_name }}
-base_image_sha: e401a4db2e5e04d1967b6729774faa96da629bcf3ba90b67d8d9cce9906bec0f
-libvirt_pool_dir: "/var/lib/libvirt/images"
+vm_os: fedora  # or 'ubuntu', 'centos', etc.
+
+os_images:
+  fedora:
+    image_name: Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2
+    image_url: https://download.fedoraproject.org/pub/fedora/linux/releases/42/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2
+    image_sha: e401a4db2e5e04d1967b6729774faa96da629bcf3ba90b67d8d9cce9906bec0f
+  ubuntu:
+    image_name: ubuntu-22.04-server-cloudimg-amd64.img
+    image_url: https://cloud-images.ubuntu.com/releases/plucky/release-20251003/ubuntu-22.04-server-cloudimg-amd64.img
+    image_sha: e60fc76ef443767324f93666d34985ca
+  rhel:
+    image_name: rhel-9.6-x86_64-kvm.qcow2
+    image_url: https://access.cdn.redhat.com/content/origin/files/sha256/49/
+    image_sha: 49443696e7f2410e5647aa16f15eb7b7b08610fea92cdf3eba44ab9ec9ff899f
+    user: 339db23f8a629a0bdf4f8e08805ff25c&_
+    auth_: 1759970503_d6851495d69f079295f7e2541613c17a
+
+libvirt_pool_dir: "/home/libvirt/images"
 vm_name: f42-dev
 vm_vcpus: 2
 vm_ram_mb: 2048
@@ -11,3 +26,4 @@ vm_net: br0-network
 vm_root_pass: test123
 cleanup_tmp: no
 ssh_key: /root/.ssh/id_rsa.pub
+
