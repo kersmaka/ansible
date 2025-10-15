@@ -1,0 +1,89 @@
+# This is the AAP growth installer inventory file
+# Please consult the docs if you're unsure what to add
+# For all optional variables please consult the included README.md
+# or the Red Hat documentation:
+# https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.5/html/containerized_installation
+
+# This section is for your AAP Gateway host(s)
+# -----------------------------------------------------
+[automationgateway]
+
+# This section is for your AAP Controller host(s)
+# -----------------------------------------------------
+[automationcontroller]
+192.168.0.145
+
+# This section is for your AAP Automation Hub host(s)
+# -----------------------------------------------------
+[automationhub]
+192.168.0.88
+
+# This section is for your AAP EDA Controller host(s)
+# -----------------------------------------------------
+[automationeda]
+
+# This section is for the AAP database
+# -----------------------------------------------------
+[database]
+192.168.0.47
+
+
+[all:vars]
+admin_password='redhat'
+
+pg_host='192.168.0.47'
+pg_port=5432
+
+pg_database='awx'
+pg_username='awx'
+pg_password='redhat'
+pg_sslmode='prefer'  # set to 'verify-full' for client-side enforced SSL
+
+# Common variables
+# https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.5/html/containerized_installation/appendix-inventory-files-vars#ref-general-inventory-variables
+# -----------------------------------------------------
+postgresql_admin_username=postgres
+postgresql_admin_password=redhat
+
+registry_username=kersmaka3
+registry_password=Anth2&32
+
+redis_mode=standalone
+
+# AAP Gateway
+# https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.5/html/containerized_installation/appendix-inventory-files-vars#ref-gateway-variables
+# -----------------------------------------------------
+gateway_admin_password=redhat
+gateway_pg_host=192.168.0.47
+gateway_pg_password=redhat
+gateway_grpc_server_processes=5
+gateway_grpc_server_max_threads_per_process=10
+gateway_grpc_auth_service_timeout=30s
+
+# AAP Controller
+# https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.5/html/containerized_installation/appendix-inventory-files-vars#ref-controller-variables
+# -----------------------------------------------------
+controller_admin_password=redhat
+controller_pg_host=192.168.0.47
+controller_pg_password=redhat
+
+# AAP Automation Hub
+# https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.5/html/containerized_installation/appendix-inventory-files-vars#ref-hub-variables
+# -----------------------------------------------------
+
+automationhub_admin_password='redhat'
+
+automationhub_pg_host='192.168.0.47'
+automationhub_pg_port=5432
+
+automationhub_pg_database='automationhub'
+automationhub_pg_username='automationhub'
+automationhub_pg_password='redhat'
+automationhub_pg_sslmode='prefer'
+
+# AAP EDA Controller
+# https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.5/html/containerized_installation/appendix-inventory-files-vars#event-driven-ansible-controller
+# -----------------------------------------------------
+eda_admin_password=redhat
+eda_pg_host=192.168.0.47
+eda_pg_password=redhat
