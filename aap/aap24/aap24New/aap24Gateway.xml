@@ -1,6 +1,5 @@
 <domain type='kvm'>
   <name>aap24Gateway01</name>
-  <uuid>51a8ab36-f001-407a-af50-a7af811bf994</uuid>
   <metadata>
     <libosinfo:libosinfo xmlns:libosinfo="http://libosinfo.org/xmlns/libvirt/domain/1.0">
       <libosinfo:os id="http://redhat.com/rhl/9"/>
