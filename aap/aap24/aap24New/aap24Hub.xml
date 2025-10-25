@@ -1,5 +1,5 @@
 <domain type='kvm' id='3'>
-  <name>aap24Hub</name>
+  <name>aap24Hub01</name>
   <uuid>47c2e0d8-5455-4449-a0db-c8ce8f122ed3</uuid>
   <metadata>
     <libosinfo:libosinfo xmlns:libosinfo="http://libosinfo.org/xmlns/libvirt/domain/1.0">
