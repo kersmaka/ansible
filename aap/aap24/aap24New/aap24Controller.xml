@@ -1,6 +1,5 @@
 <domain type='kvm' id='9'>
   <name>aap24Controller01</name>
-  <uuid>f2a959b6-9d81-466c-b319-b8bb8c8b60e1</uuid>
   <metadata>
     <libosinfo:libosinfo xmlns:libosinfo="http://libosinfo.org/xmlns/libvirt/domain/1.0">
       <libosinfo:os id="http://redhat.com/rhl/9"/>
