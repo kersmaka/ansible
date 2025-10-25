@@ -35,7 +35,7 @@
     <emulator>/usr/bin/qemu-system-x86_64</emulator>
     <disk type='file' device='disk'>
       <driver name='qemu' type='qcow2'/>
-      <source file='/home/ansible_admin/vms/rhel-9.4-x86_64-kvmGateway.qcow2'/>
+      <source file='/home/ansible_admin/vms/kvmGateway.qcow2'/>
       <target dev='hda' bus='ide'/>
       <address type='drive' controller='0' bus='0' target='0' unit='0'/>
     </disk>
