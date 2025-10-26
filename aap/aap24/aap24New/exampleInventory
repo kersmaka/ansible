@@ -10,7 +10,7 @@
 # This section is for your platform gateway hosts
 # -----------------------------------------------------
 [automationgateway]
-gateway.example.org
+192.168.0.236
 
 # This section is for your automation controller hosts
 # -----------------------------------------------------
