@@ -40,6 +40,7 @@ peers=execution_nodes
 192.168.0.47
 
 [all:vars]
+controller_hostname=192.168.0.236
 
 # Common variables
 # https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/rpm_installation/appendix-inventory-files-vars#general-variables
