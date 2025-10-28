@@ -1,5 +1,5 @@
 [test_nodes]
-aap25 ansible_ssh_host=192.168.0.20
+aap26 ansible_ssh_host=192.168.0.206
 
 [homelab]
 homelab ansible_ssh_host=192.168.0.200
