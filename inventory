@@ -1,27 +1,5 @@
-[lab]
-rhel95-lab01 ansible_ssh_host=10.0.0.10
-rhel95-lab04 ansible_ssh_host=10.0.0.155
-
-[all]
-rhel95 ansible_ssh_host=10.0.0.33
-
 [test_nodes]
-#testkvm08.com ansible_ssh_host=192.168.0.66
-#testkvm08.com ansible_ssh_host=192.168.0.66 ansible_user=root ansible_private_key_file=/root/.ssh/id_rsa
-testkvm08.com ansible_host=192.168.0.66 ansible_user=root ansible_ssh_private_key_file=/root/.ssh/id_rsa ansible_python_interpreter=/usr/bin/python3 ansible_ssh_args="-o PreferredAuthentications=publickey -o StrictHostKeyChecking=no -o ControlMaster=auto -o ControlPersist=60s -o ForwardAgent=yes"
-#testkvm08.com ansible_ssh_host=192.168.0.66 ansible_python_interpreter=/usr/bin/python3
-
-[rhel_hosts]
-rhel95 ansible_ssh_host=10.0.0.33
-
-[rhel95]
-rhel95 ansible_ssh_host=10.0.0.33
-#group_name=rhel95
-
-[rhel95:vars]
-group_name=rhel95
-
-[debian_hosts]
+aap25 ansible_ssh_host=192.168.0.20
 
 [homelab]
 homelab ansible_ssh_host=192.168.0.200
