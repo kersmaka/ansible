@@ -1,6 +1,6 @@
 ---
 - name: Ping remote host with specific user and private key
-  hosts: {{ target }}
+  hosts: "{{ target }}"
   gather_facts: false
   vars:
     #ansible_user: admin
