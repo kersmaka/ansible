@@ -4,3 +4,6 @@ aap26Container ansible_ssh_host=192.168.0.43
 
 [homelab]
 homelab ansible_ssh_host=192.168.0.200
+
+[local]
+localhost ansible_connection=local
