@@ -1,6 +1,6 @@
 ---
 - name: Universal Test Playbook
-  hosts: all
+  hosts: local
   gather_facts: true
   become: false
 
