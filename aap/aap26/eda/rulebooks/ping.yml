@@ -1,0 +1,12 @@
+---
+- name: react_to_ping
+  hosts: all
+  sources:
+    - ansible.eda.webhook:
+        port: 5000
+  rules:
+    - name: Print ping message
+      condition: event.payload.msg == "ping"
+      action:
+        debug:
+          msg: "pong!"
