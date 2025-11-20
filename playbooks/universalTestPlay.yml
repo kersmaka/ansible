@@ -1,0 +1,50 @@
+---
+- name: Universal Test Playbook
+  hosts: localhost
+  gather_facts: true
+  become: false
+
+  tasks:
+
+    - name: Test connection (ping)
+      ansible.builtin.ping:
+
+    - name: Display the hostname
+      ansible.builtin.debug:
+        msg: "Hostname: {{ ansible_hostname }}"
+
+    - name: Show system info summary
+      ansible.builtin.debug:
+        msg:
+          - "OS: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+          - "Kernel: {{ ansible_kernel }}"
+          - "Architecture: {{ ansible_architecture }}"
+          - "Uptime (seconds): {{ ansible_uptime_seconds | default('N/A') }}"
+          - "Python version: {{ ansible_python_version | default('N/A') }}"
+
+    - name: Check disk usage on root filesystem (Linux/Unix only)
+      ansible.builtin.shell: df -h /
+      register: disk_usage
+      changed_when: false
+      ignore_errors: true
+
+    - name: Display disk usage
+      ansible.builtin.debug:
+        var: disk_usage.stdout_lines
+
+    - name: Check available memory
+      ansible.builtin.debug:
+        msg: "Total memory: {{ ansible_memtotal_mb | default('N/A') }} MB"
+
+    - name: Verify a simple file write/read (safe temp test)
+      ansible.builtin.copy:
+        dest: /tmp/ansible_test_file.txt
+        content: "Hello from Ansible on {{ ansible_hostname }} at {{ ansible_date_time.iso8601 }}"
+      register: test_file
+      changed_when: false
+      ignore_errors: true
+
+    - name: Display file test result
+      ansible.builtin.debug:
+        msg: "File test successful on {{ ansible_hostname }}"
+      when: test_file is defined and not test_file.failed

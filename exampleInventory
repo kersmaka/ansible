@@ -28,7 +28,7 @@ peers=execution_nodes
 # This section is for your automation hub hosts
 # -----------------------------------------------------
 [automationhub]
-192.168.0.89
+192.168.0.88
 
 # This section is for your Event-Driven Ansible controller hosts
 # -----------------------------------------------------
