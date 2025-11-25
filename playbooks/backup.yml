@@ -1,118 +1,185 @@
 ---
 - name: Backup Ansible Automation Platform Containerized Installation
-  hosts: all
+  hosts: localhost
+  connection: local
   gather_facts: yes
   vars:
     aap_install_dir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
     backup_log_dir: "/var/log/aap-backups"
-    backup_timestamp: "{{ ansible_date_time.iso8601_basic_short }}"
+    # Fallback host if not running on AAP host (set to your AAP server hostname/IP)
+    fallback_aap_host: "aap26Fresh"
     
   tasks:
-    - name: Create backup log directory
-      file:
-        path: "{{ backup_log_dir }}"
-        state: directory
-        mode: '0755'
-      become: yes
+    - name: Get timestamp
+      set_fact:
+        backup_timestamp: "{{ lookup('pipe', 'date +%Y%m%d_%H%M%S') }}"
 
-    - name: Check if AAP installation directory exists
+    - name: Check if we're in an AWX/AAP execution environment
+      stat:
+        path: /runner/project
+      register: execution_env
+
+    - name: Check if AAP installation directory exists locally
       stat:
         path: "{{ aap_install_dir }}"
-      register: aap_dir
+      register: aap_dir_local
+      when: execution_env.stat.exists
 
-    - name: Display directory status
+    - name: Determine execution strategy
+      set_fact:
+        run_mode: "{{ 'delegated' if (execution_env.stat.exists and not aap_dir_local.stat.exists) else 'local' }}"
+        target_host: "{{ fallback_aap_host if (execution_env.stat.exists and not aap_dir_local.stat.exists) else 'localhost' }}"
+
+    - name: Display execution mode
       debug:
-        msg: 
-          - "Host: {{ inventory_hostname }}"
-          - "Checking AAP directory: {{ aap_install_dir }}"
+        msg:
+          - "=== AAP Backup Execution Mode ==="
+          - "Running in execution environment: {{ execution_env.stat.exists }}"
+          - "Execution mode: {{ run_mode }}"
+          - "Target host: {{ target_host }}"
+          - "Install directory: {{ aap_install_dir }}"
+
+    - name: Check if AAP installation directory exists on target
+      stat:
+        path: "{{ aap_install_dir }}"
+      delegate_to: "{{ target_host }}"
+      register: aap_dir
+      when: run_mode == 'delegated'
+
+    - name: Use local check result if running locally
+      set_fact:
+        aap_dir: "{{ aap_dir_local }}"
+      when: run_mode == 'local'
+
+    - name: Display directory check result
+      debug:
+        msg:
+          - "Host: {{ target_host }}"
+          - "Directory: {{ aap_install_dir }}"
           - "Exists: {{ aap_dir.stat.exists }}"
 
     - name: Fail if AAP directory does not exist
       fail:
         msg: |
-          AAP installation directory does not exist on {{ inventory_hostname }}: {{ aap_install_dir }}
+          AAP installation directory does not exist: {{ aap_install_dir }}
+          
+          Running in: {{ run_mode }} mode on {{ target_host }}
+          
           Please verify:
-          1. The correct host is in your inventory
-          2. The path is correct for this host
-          3. SSH connectivity is working
+          {% if run_mode == 'delegated' %}
+          1. The fallback_aap_host variable is set correctly (currently: {{ fallback_aap_host }})
+          2. SSH connectivity to {{ target_host }} is working
+          3. The aap_install_dir path is correct for that host
+          
+          Or run with extra vars: -e "fallback_aap_host=YOUR_AAP_HOST"
+          {% else %}
+          1. You're running this on the correct host
+          2. The aap_install_dir path is correct
+          
+          Current host appears to be: {{ ansible_hostname | default('unknown') }}
+          {% endif %}
       when: not aap_dir.stat.exists
 
     - name: Check if inventory file exists
       stat:
         path: "{{ aap_install_dir }}/inventory"
+      delegate_to: "{{ target_host }}"
       register: inventory_file
-
-    - name: Display inventory file status
-      debug:
-        msg: "Inventory file at {{ aap_install_dir }}/inventory - Exists: {{ inventory_file.stat.exists }}"
 
     - name: Fail if inventory file does not exist
       fail:
         msg: "Inventory file does not exist: {{ aap_install_dir }}/inventory"
       when: not inventory_file.stat.exists
 
+    - name: Create backup log directory
+      file:
+        path: "{{ backup_log_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: "{{ target_host }}"
+      become: yes
+
     - name: Display backup start message
       debug:
         msg: 
-          - "=== Starting AAP Backup on {{ inventory_hostname }} ==="
+          - "=== Starting AAP Backup ==="
+          - "Mode: {{ run_mode }}"
+          - "Target: {{ target_host }}"
           - "Directory: {{ aap_install_dir }}"
           - "Timestamp: {{ backup_timestamp }}"
-          - "User: {{ ansible_user | default('current user') }}"
 
     - name: Run AAP containerized backup
       shell: |
         cd {{ aap_install_dir }}
-        ansible-playbook -i inventory ansible.containerized_installer.backup
+        ansible-playbook -i inventory ansible.containerized_installer.backup 2>&1
       args:
         chdir: "{{ aap_install_dir }}"
         executable: /bin/bash
-      register: backup_result
+      delegate_to: "{{ target_host }}"
       become: yes
       become_user: aap
+      register: backup_result
+      changed_when: true
+      failed_when: false
 
     - name: Save backup output to log file
       copy:
         content: |
           Backup Execution Log
           ====================
-          Host: {{ inventory_hostname }}
+          Execution Mode: {{ run_mode }}
+          Target Host: {{ target_host }}
           Date: {{ ansible_date_time.date }}
           Time: {{ ansible_date_time.time }}
           Directory: {{ aap_install_dir }}
           Return Code: {{ backup_result.rc }}
+          
+          === COMMAND ===
+          cd {{ aap_install_dir }}
+          ansible-playbook -i inventory ansible.containerized_installer.backup
           
           === STDOUT ===
           {{ backup_result.stdout }}
           
           === STDERR ===
           {{ backup_result.stderr }}
-        dest: "{{ backup_log_dir }}/backup_{{ inventory_hostname }}_{{ backup_timestamp }}.log"
+        dest: "{{ backup_log_dir }}/backup_{{ backup_timestamp }}.log"
         mode: '0644'
+      delegate_to: "{{ target_host }}"
       become: yes
 
-    - name: Display backup result
+    - name: Display backup output (first 50 lines)
+      debug:
+        msg: "{{ backup_result.stdout_lines[:50] }}"
+      when: backup_result.stdout_lines is defined
+
+    - name: Display if output was truncated
+      debug:
+        msg: "... (output truncated, {{ backup_result.stdout_lines | length - 50 }} more lines in log file)"
+      when: backup_result.stdout_lines is defined and backup_result.stdout_lines | length > 50
+
+    - name: Display backup result summary
       debug:
         msg:
-          - "=== Backup Completed on {{ inventory_hostname }} ==="
-          - "Directory: {{ aap_install_dir }}"
+          - "=== Backup Completed ==="
+          - "Mode: {{ run_mode }}"
+          - "Host: {{ target_host }}"
           - "Return code: {{ backup_result.rc }}"
-          - "Log: {{ backup_log_dir }}/backup_{{ inventory_hostname }}_{{ backup_timestamp }}.log"
+          - "Full log: {{ backup_log_dir }}/backup_{{ backup_timestamp }}.log"
 
     - name: Show success message
       debug:
-        msg: "✓ Backup completed successfully on {{ inventory_hostname }}!"
+        msg: "✓ Backup completed successfully!"
       when: backup_result.rc == 0
 
     - name: Show warning if backup had issues
       debug:
-        msg: "⚠ WARNING: Backup on {{ inventory_hostname }} completed with return code {{ backup_result.rc }}. Check the log file for details."
+        msg: 
+          - "⚠ WARNING: Backup completed with return code {{ backup_result.rc }}"
+          - "Check the log file for details: {{ backup_log_dir }}/backup_{{ backup_timestamp }}.log"
       when: backup_result.rc != 0
 
-    - name: Fetch backup log to AWX/AAP controller (optional)
-      fetch:
-        src: "{{ backup_log_dir }}/backup_{{ inventory_hostname }}_{{ backup_timestamp }}.log"
-        dest: "/tmp/aap-backup-logs/backup_{{ inventory_hostname }}_{{ backup_timestamp }}.log"
-        flat: yes
-      become: yes
-      ignore_errors: yes
-      when: backup_result is defined
+    - name: Fail job if backup failed critically
+      fail:
+        msg: "Backup failed with return code {{ backup_result.rc }}. Check logs at {{ backup_log_dir }}/backup_{{ backup_timestamp }}.log"
+      when: backup_result.rc != 0 and backup_result.rc > 2
