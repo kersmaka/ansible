@@ -1,0 +1,79 @@
+---
+- name: Backup Ansible Automation Platform Containerized Installation
+  hosts: localhost
+  connection: local
+  become: yes
+  vars:
+    aap_install_dir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
+    backup_log_dir: "/var/log/aap-backups"
+    backup_timestamp: "{{ ansible_date_time.iso8601_basic_short }}"
+    
+  tasks:
+    - name: Create backup log directory
+      file:
+        path: "{{ backup_log_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Check if AAP installation directory exists
+      stat:
+        path: "{{ aap_install_dir }}"
+      register: aap_dir
+
+    - name: Fail if AAP directory does not exist
+      fail:
+        msg: "AAP installation directory does not exist: {{ aap_install_dir }}"
+      when: not aap_dir.stat.exists
+
+    - name: Check if inventory file exists
+      stat:
+        path: "{{ aap_install_dir }}/inventory"
+      register: inventory_file
+
+    - name: Fail if inventory file does not exist
+      fail:
+        msg: "Inventory file does not exist in {{ aap_install_dir }}"
+      when: not inventory_file.stat.exists
+
+    - name: Run AAP containerized backup
+      shell: |
+        cd {{ aap_install_dir }}
+        ansible-playbook -i inventory ansible.containerized_installer.backup
+      args:
+        chdir: "{{ aap_install_dir }}"
+      register: backup_result
+      changed_when: true
+
+    - name: Save backup output to log file
+      copy:
+        content: |
+          Backup Execution Log
+          ====================
+          Date: {{ ansible_date_time.date }}
+          Time: {{ ansible_date_time.time }}
+          Directory: {{ aap_install_dir }}
+          
+          Output:
+          {{ backup_result.stdout }}
+          
+          Errors (if any):
+          {{ backup_result.stderr }}
+        dest: "{{ backup_log_dir }}/backup_{{ backup_timestamp }}.log"
+        mode: '0644'
+
+    - name: Display backup result
+      debug:
+        msg:
+          - "Backup command executed"
+          - "Return code: {{ backup_result.rc }}"
+          - "Log saved to: {{ backup_log_dir }}/backup_{{ backup_timestamp }}.log"
+
+    - name: Check if backup was successful
+      debug:
+        msg: "Backup completed successfully!"
+      when: backup_result.rc == 0
+
+    - name: Warn if backup had issues
+      debug:
+        msg: "WARNING: Backup completed with return code {{ backup_result.rc }}. Check the logs for details."
+      when: backup_result.rc != 0
