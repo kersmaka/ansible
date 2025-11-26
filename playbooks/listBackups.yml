@@ -15,8 +15,11 @@
     # Path where the backups are stored inside the setup directory
     aap_backup_base_path: "{{ aap_setup_dir }}/backups"
     
-    # Path to the inventory file used for the installation/restore
-    aap_inventory_file: "{{ aap_setup_dir }}/inventory"
+    # Path to the inventory file (relative name used below as we use chdir)
+    aap_inventory_file: "inventory" 
+    
+    # This variable is no longer needed as we use the FQCN below
+    # aap_restore_playbook: "{{ aap_setup_dir }}/restore.yml"
 
   tasks:
     - name: Fail if backup_timestamp is set to default 'LATEST'
@@ -43,22 +46,19 @@
         msg: "❌ ERROR: The backup directory '{{ full_backup_path }}' does not exist. Check the timestamp variable you provided."
       when: not backup_dir_stat.stat.exists or not backup_dir_stat.stat.isdir
 
-    - name: Restore AAP using the containerized installer's playbook
-      # The installer bundle contains the necessary 'restore.yml' playbook 
-      # and the corresponding inventory to manage the containers.
+    - name: Restore AAP using the containerized installer's playbook (FQCN method)
+      # This uses the FQCN (Fully Qualified Collection Name) for the restore playbook,
+      # which matches the command you provided: ansible.containerized_installer.restore
       ansible.builtin.shell: |
-        # Change directory to the setup bundle
-        cd {{ aap_setup_dir }}
-        
-        # Run the restore playbook using the local inventory and passing the restore path
-        # The 'restore.yml' playbook handles stopping services, restoring data, and restarting services.
-        ansible-playbook -i {{ aap_inventory_file }} restore.yml --extra-vars "restore_dir={{ full_backup_path }}"
+        # Run the restore playbook using the FQCN, passing the inventory name and restore path.
+        ansible-playbook -i {{ aap_inventory_file }} ansible.containerized_installer.restore --extra-vars "restore_dir={{ full_backup_path }}"
       args:
+        # CRUCIAL: Must run from the setup directory to correctly find the 'inventory' file 
+        # and resolve the 'ansible.containerized_installer' collection.
         chdir: "{{ aap_setup_dir }}"
       changed_when: true
       become: yes
       become_user: root # Root access is required to run playbooks against the containerized services
-      # CORRECTED: 'timeout' is a task-level parameter, not a module argument.
       timeout: 3600 
 
     - name: Check restoration status
