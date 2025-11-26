@@ -1,11 +1,81 @@
----
-- name: Restore AAP Backup
+- name: Restore Ansible Automation Platform
   hosts: all
-  gather_facts: no
-  become: yes
-  become_user: aap
+  gather_facts: yes
+  vars:
+    # Set the path to the .tar.gz backup file you wish to restore.
+    # *** YOU MUST CHANGE THIS TO THE CORRECT PATH FOR YOUR RESTORE ***
+    restore_backup_file: "{{ aap_path }}/backups/20251126_173000/aap_backup_20251126_173000.tar.gz" 
   tasks:
-    - name: Change directory and run restore playbook
-      ansible.builtin.command:
-        cmd: ansible-playbook -i inventory ansible.containerized_installer.restore -kK
-        chdir: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64
+    - name: Skip hosts without AAP installation
+      meta: end_host
+      when: has_aap is not defined or not has_aap
+
+    - name: Display restore configuration
+      debug:
+        msg:
+          - "=== Starting AAP Restore ==="
+          - "Host: {{ inventory_hostname }}"
+          - "Directory: {{ aap_path }}"
+          - "Backup File: {{ restore_backup_file }}"
+
+    - name: Verify inventory file exists
+      stat:
+        path: "{{ aap_path }}/inventory"
+      register: inventory_file
+
+    - name: Fail if inventory file missing
+      fail:
+        msg: "Inventory file not found at {{ aap_path }}/inventory"
+      when: not inventory_file.stat.exists
+
+    - name: Verify backup file exists
+      stat:
+        path: "{{ restore_backup_file }}"
+      register: backup_file
+      
+    - name: Fail if backup file missing
+      fail:
+        msg: "Backup file not found at {{ restore_backup_file }}. Please update the 'restore_backup_file' variable."
+      when: not backup_file.stat.exists
+
+    - name: Display restore command
+      debug:
+        msg: 
+          - "Command: cd {{ aap_path }} && ansible-playbook -i inventory ansible.containerized_installer.restore -e backup_file={{ restore_backup_file }}"
+
+    - name: Run AAP containerized restore
+      shell: |
+        ansible-playbook -i inventory ansible.containerized_installer.restore \
+          -e backup_file={{ restore_backup_file | quote }} 2>&1
+      args:
+        chdir: "{{ aap_path }}"
+        executable: /bin/bash
+      become: yes
+      # The restore command typically needs to be run as the user that owns the AAP files, often 'aap'.
+      become_user: aap
+      register: restore_result
+      changed_when: true
+      failed_when: false # Allow us to check RC later
+
+    - name: Display result
+      debug:
+        msg:
+          - "=== Restore Complete ==="
+          - "Host: {{ inventory_hostname }}"
+          - "Return Code: {{ restore_result.rc }}"
+          - "Check output for details."
+
+    - name: Success
+      debug:
+        msg: "✓ Restore completed successfully on {{ inventory_hostname }}!"
+      when: restore_result.rc == 0
+
+    - name: Warning on error
+      debug:
+        msg: "⚠ WARNING: Restore had errors (RC: {{ restore_result.rc }}). Check the output for details."
+      when: restore_result.rc != 0
+
+    - name: Fail if critical error
+      fail:
+        msg: "Restore failed critically with RC {{ restore_result.rc }}"
+      when: restore_result.rc != 0 and restore_result.rc > 2
