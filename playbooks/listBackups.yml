@@ -55,11 +55,11 @@
         ansible-playbook -i {{ aap_inventory_file }} restore.yml --extra-vars "restore_dir={{ full_backup_path }}"
       args:
         chdir: "{{ aap_setup_dir }}"
-        # Restoration can take significant time depending on database size.
-        timeout: 3600 
       changed_when: true
       become: yes
       become_user: root # Root access is required to run playbooks against the containerized services
+      # CORRECTED: 'timeout' is a task-level parameter, not a module argument.
+      timeout: 3600 
 
     - name: Check restoration status
       debug:
