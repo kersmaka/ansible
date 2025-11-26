@@ -1,10 +1,10 @@
 ---
 - name: Restore Ansible Automation Platform from Backup
-  # Explicitly disable fact gathering to bypass the task that is failing due to 
-  # the 'sudo: a password is required' error in the execution environment.
+  # Play is configured to connect as 'aap' and bypass fact gathering 
+  # to prevent the 'sudo: a password is required' error.
   hosts: all 
   remote_user: "{{ ansible_user }}" 
-  gather_facts: no # <--- CRITICAL CHANGE: Disabling fact gathering
+  gather_facts: no 
   vars:
     # --- REQUIRED INPUT ---
     # Set this to the timestamp folder name of the backup you wish to restore.
@@ -38,21 +38,22 @@
       set_fact:
         full_backup_path: "{{ aap_backup_base_path }}/{{ backup_timestamp }}"
 
-    - name: Check if the specified backup directory exists
-      # Note: We must explicitly state the user here since we disabled fact gathering.
-      # The remote_user is already set to 'aap' at the play level, so this should run fine.
-      ansible.builtin.stat:
-        path: "{{ full_backup_path }}"
-      register: backup_dir_stat
-
-    - name: Fail if backup directory does not exist
-      fail:
-        msg: "❌ ERROR: The backup directory '{{ full_backup_path }}' does not exist. Check the timestamp variable you provided."
-      when: not backup_dir_stat.stat.exists or not backup_dir_stat.stat.isdir
+    # --- CRITICAL FIX: Replacing 'stat' with pure shell to bypass the sudo requirement ---
+    - name: Validate that the backup directory exists (Pure Shell Check)
+      # Uses the standard 'test -d' command. This is unprivileged and runs directly 
+      # as the 'aap' user, ensuring no sudo is needed.
+      ansible.builtin.shell: |
+        if [ ! -d "{{ full_backup_path }}" ]; then
+          echo "❌ ERROR: The backup directory '{{ full_backup_path }}' does not exist. Check the timestamp variable you provided." >&2
+          exit 1
+        fi
+      args:
+        warn: false
+      changed_when: false
+    # -----------------------------------------------------------------------------------
 
     - name: Restore AAP using the containerized installer's playbook (FQCN method)
       # We are running the shell command as the connected user ('aap').
-      # The FQCN playbook *itself* will handle any internal 'sudo' it needs (e.g., for service restart).
       ansible.builtin.shell: |
         # IMPORTANT: Adding '--skip-tags services' to prevent the internal FQCN playbook 
         # from attempting to manage containers via systemd units (postgresql.service, etc.) 
