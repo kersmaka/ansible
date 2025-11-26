@@ -4,6 +4,7 @@
   gather_facts: yes
   vars:
     aap_path: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
+    log_dir: "/var/log/aap-backups" # New variable for log directory
   tasks:
     - name: Get list of available backups
       find:
@@ -33,7 +34,8 @@
       vars:
         item:
           name: "{{ backup.path | basename }}"
-          date: "{{ backup.mtime | int | to_datetime('%Y-%m-%d %H:%M:%S') }}"
+          # CORRECTED: Use to_datetime to convert the timestamp, then strftime to format it.
+          date: "{{ backup.mtime | to_datetime | strftime('%Y-%m-%d %H:%M:%S') }}"
           path: "{{ backup.path }}"
       loop: "{{ sorted_backups }}"
       loop_control:
@@ -67,9 +69,10 @@
           - "Backup Location: {{ aap_path }}/backups"
           - "Total Backups: {{ available_backups.matched }}"
           - ""
+          # CORRECTED: Use the same corrected timestamp formatting here
           - "{% for idx in range(sorted_backups | length) %}┌─ Backup #{{ idx + 1 }} {% if idx == 0 %}(LATEST){% endif %}"
           - "│  Timestamp:  {{ sorted_backups[idx].path | basename }}"
-          - "│  Created:    {{ sorted_backups[idx].mtime | int | to_datetime('%Y-%m-%d %H:%M:%S') }}"
+          - "│  Created:    {{ sorted_backups[idx].mtime | to_datetime | strftime('%Y-%m-%d %H:%M:%S') }}"
           - "│  Files:      {{ backup_file_counts.results[idx].matched }} archives"
           - "│  Total Size: {{ backup_sizes.results[idx].stdout }}"
           - "│  Path:       {{ sorted_backups[idx].path }}"
@@ -79,6 +82,13 @@
           - "To restore a backup, use the 'AAP Restore from Backup' job template"
           - "and enter the timestamp shown above (e.g., {{ sorted_backups[0].path | basename }})"
           - "or enter 'latest' to restore the most recent backup."
+
+    - name: Ensure log directory exists # NEW TASK to prevent save failure
+      file:
+        path: "{{ log_dir }}"
+        state: directory
+        mode: '0755'
+      become: yes
 
     - name: Create backup summary file
       copy:
@@ -90,22 +100,4 @@
           Location: {{ aap_path }}/backups
           
           {% for idx in range(sorted_backups | length) %}
-          Backup #{{ idx + 1 }}{% if idx == 0 %} (LATEST){% endif %}
-          
-            Timestamp:  {{ sorted_backups[idx].path | basename }}
-            Created:    {{ sorted_backups[idx].mtime | int | to_datetime('%Y-%m-%d %H:%M:%S') }}
-            Files:      {{ backup_file_counts.results[idx].matched }} archives
-            Size:       {{ backup_sizes.results[idx].stdout }}
-            Path:       {{ sorted_backups[idx].path }}
-          
-          {% endfor %}
-        dest: "/var/log/aap-backups/available_backups.txt"
-        mode: '0644'
-      become: yes
-
-    - name: Summary
-      debug:
-        msg:
-          - "✓ Backup list saved to: /var/log/aap-backups/available_backups.txt"
-          - "✓ Use the timestamp (e.g., {{ sorted_backups[0].path | basename }}) to restore a specific backup"
-          - "✓ Or use 'latest' to restore the most recent backup"
+          Backup #
