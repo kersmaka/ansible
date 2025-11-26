@@ -1,72 +1,11 @@
 ---
-- name: Restore Ansible Automation Platform from Backup
-  # Play is configured to connect as 'aap' and bypass fact gathering 
-  # to prevent the 'sudo: a password is required' error.
-  hosts: all 
-  remote_user: "{{ ansible_user }}" 
-  gather_facts: no 
-  vars:
-    # --- REQUIRED INPUT ---
-    # Set this to the timestamp folder name of the backup you wish to restore.
-    backup_timestamp: "LATEST" # Default to 'LATEST', which you should override in the prompt
-    
-    # --- CONFIGURATION ---
-    # The user Ansible should SSH as (must be the owner of the containerized install)
-    ansible_user: "aap" 
-    
-    # Base path for the AAP setup bundle (contains inventory and playbooks)
-    aap_setup_dir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
-    
-    # Path where the backups are stored inside the setup directory
-    aap_backup_base_path: "{{ aap_setup_dir }}/backups"
-    
-    # Inventory file name relative to the aap_setup_dir
-    aap_inventory_file: "inventory" 
-
+- name: Restore AAP Backup
+  hosts: all
+  gather_facts: no
+  become: yes
+  become_user: aap
   tasks:
-    - name: Fail if backup_timestamp is set to default 'LATEST'
-      fail:
-        msg: |
-          ❌ ERROR: The 'backup_timestamp' variable must be set.
-          When launching this Job Template, please provide the backup folder name 
-          (e.g., 20251126_201320) as an Extra Variable.
-          
-          You can use the 'List Available AAP Backups' job to find valid timestamps.
-      when: backup_timestamp == "LATEST"
-
-    - name: Set full path to the backup directory
-      set_fact:
-        full_backup_path: "{{ aap_backup_base_path }}/{{ backup_timestamp }}"
-
-    # --- CRITICAL FIX: Replacing 'stat' with pure shell to bypass the sudo requirement ---
-    - name: Validate that the backup directory exists (Pure Shell Check)
-      # Uses the standard 'test -d' command. This is unprivileged and runs directly 
-      # as the 'aap' user, ensuring no sudo is needed.
-      ansible.builtin.shell: |
-        if [ ! -d "{{ full_backup_path }}" ]; then
-          echo "❌ ERROR: The backup directory '{{ full_backup_path }}' does not exist. Check the timestamp variable you provided." >&2
-          exit 1
-        fi
-      args:
-        # The 'warn: false' parameter was removed as it is unsupported and caused the failure.
-        chdir: "{{ aap_setup_dir }}"
-      changed_when: false
-    # -----------------------------------------------------------------------------------
-
-    - name: Restore AAP using the containerized installer's playbook (FQCN method)
-      # We are running the shell command as the connected user ('aap').
-      ansible.builtin.shell: |
-        # IMPORTANT: Adding '--skip-tags services' to prevent the internal FQCN playbook 
-        # from attempting to manage containers via systemd units (postgresql.service, etc.) 
-        # which fail in rootless Podman environments.
-        ansible-playbook -i {{ aap_inventory_file }} ansible.containerized_installer.restore --extra-vars "restore_dir={{ full_backup_path }}" --skip-tags services
-        
-      args:
-        # CRUCIAL: Must run from the setup directory
-        chdir: "{{ aap_setup_dir }}"
-      changed_when: true
-      timeout: 3600 
-
-    - name: Check restoration status
-      debug:
-        msg: "✅ AAP restoration is complete. Due to the rootless installation, the restoration process skipped service management. **You must manually restart AAP services as the 'aap' user on the host** (e.g., by running `~/.local/bin/podman restart -a` or by running the AAP setup script with '--start' if available)."
+    - name: Change directory and run restore playbook
+      ansible.builtin.command:
+        cmd: ansible-playbook -i inventory ansible.containerized_installer.restore
+        chdir: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64
