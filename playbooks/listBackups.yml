@@ -9,11 +9,14 @@
     backup_timestamp: "LATEST" # Default to 'LATEST', which you should override in the prompt
     
     # --- CONFIGURATION ---
-    # Base path for the AAP setup bundle
+    # Base path for the AAP setup bundle (contains inventory and playbooks)
     aap_setup_dir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
     
     # Path where the backups are stored inside the setup directory
     aap_backup_base_path: "{{ aap_setup_dir }}/backups"
+    
+    # Path to the inventory file used for the installation/restore
+    aap_inventory_file: "{{ aap_setup_dir }}/inventory"
 
   tasks:
     - name: Fail if backup_timestamp is set to default 'LATEST'
@@ -40,29 +43,23 @@
         msg: "❌ ERROR: The backup directory '{{ full_backup_path }}' does not exist. Check the timestamp variable you provided."
       when: not backup_dir_stat.stat.exists or not backup_dir_stat.stat.isdir
 
-    - name: Stop AAP services before restore
+    - name: Restore AAP using the containerized installer's playbook
+      # The installer bundle contains the necessary 'restore.yml' playbook 
+      # and the corresponding inventory to manage the containers.
       ansible.builtin.shell: |
-        # Use '--no-log' to prevent sensitive information from being logged in the Job output
+        # Change directory to the setup bundle
         cd {{ aap_setup_dir }}
-        ./setup.sh -b --no-log --stop
-      args:
-        chdir: "{{ aap_setup_dir }}"
-      changed_when: true
-      become: yes
-      become_user: root # Must run as root to manage system services/containers
-
-    - name: Run AAP setup script with restore flag
-      ansible.builtin.shell: |
-        # The setup.sh script handles the restoration process. It unpacks the archives
-        # located in the specified --restore-from directory and updates the configuration.
-        ./setup.sh -b --no-log --restore-from {{ full_backup_path }}
+        
+        # Run the restore playbook using the local inventory and passing the restore path
+        # The 'restore.yml' playbook handles stopping services, restoring data, and restarting services.
+        ansible-playbook -i {{ aap_inventory_file }} restore.yml --extra-vars "restore_dir={{ full_backup_path }}"
       args:
         chdir: "{{ aap_setup_dir }}"
         # Restoration can take significant time depending on database size.
         timeout: 3600 
       changed_when: true
       become: yes
-      become_user: root # Must run as root to run setup.sh
+      become_user: root # Root access is required to run playbooks against the containerized services
 
     - name: Check restoration status
       debug:
