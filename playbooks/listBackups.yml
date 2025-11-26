@@ -7,5 +7,5 @@
   tasks:
     - name: Change directory and run restore playbook
       ansible.builtin.command:
-        cmd: ansible-playbook -i inventory ansible.containerized_installer.restore
+        cmd: ansible-playbook -i inventory ansible.containerized_installer.restore -kK
         chdir: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64
