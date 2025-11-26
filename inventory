@@ -1,6 +1,7 @@
 [test_nodes]
 aap26 ansible_ssh_host=192.168.0.206
 aap26Container ansible_ssh_host=192.168.0.43
+aap26Fresh ansible_ssh_host=192.168.0.24
 
 [homelab]
 homelab ansible_ssh_host=192.168.0.200
