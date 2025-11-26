@@ -1,10 +1,10 @@
 ---
 - name: List Available AAP Backups
-  hosts: all # Note: Since you removed 'localhost' from the inventory, this will only run on 'aap26Fresh'.
+  hosts: all
   gather_facts: yes
   vars:
     aap_path: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
-    log_dir: "/var/log/aap-backups" # New variable for log directory
+    log_dir: "/var/log/aap-backups" # Variable for log directory
   tasks:
     - name: Get list of available backups
       find:
@@ -34,8 +34,8 @@
       vars:
         item:
           name: "{{ backup.path | basename }}"
-          # CORRECTED: Use | int to convert the float timestamp to an integer before date conversion
-          date: "{{ backup.mtime | int | to_datetime | strftime('%Y-%m-%d %H:%M:%S') }}"
+          # CORRECTED: Use '%s' format to handle the epoch time before strftime
+          date: "{{ backup.mtime | to_datetime('%s') | strftime('%Y-%m-%d %H:%M:%S') }}"
           path: "{{ backup.path }}"
       loop: "{{ sorted_backups }}"
       loop_control:
@@ -71,8 +71,8 @@
           - ""
           - "{% for idx in range(sorted_backups | length) %}┌─ Backup #{{ idx + 1 }} {% if idx == 0 %}(LATEST){% endif %}"
           - "│  Timestamp:  {{ sorted_backups[idx].path | basename }}"
-          # CORRECTED: Added | int
-          - "│  Created:    {{ sorted_backups[idx].mtime | int | to_datetime | strftime('%Y-%m-%d %H:%M:%S') }}"
+          # CORRECTED
+          - "│  Created:    {{ sorted_backups[idx].mtime | to_datetime('%s') | strftime('%Y-%m-%d %H:%M:%S') }}"
           - "│  Files:      {{ backup_file_counts.results[idx].matched }} archives"
           - "│  Total Size: {{ backup_sizes.results[idx].stdout }}"
           - "│  Path:       {{ sorted_backups[idx].path }}"
@@ -103,8 +103,8 @@
           Backup #{{ idx + 1 }}{% if idx == 0 %} (LATEST){% endif %}
           
             Timestamp:  {{ sorted_backups[idx].path | basename }}
-            # CORRECTED: Added | int
-            Created:    {{ sorted_backups[idx].mtime | int | to_datetime | strftime('%Y-%m-%d %H:%M:%S') }}
+            # CORRECTED
+            Created:    {{ sorted_backups[idx].mtime | to_datetime('%s') | strftime('%Y-%m-%d %H:%M:%S') }}
             Files:      {{ backup_file_counts.results[idx].matched }} archives
             Size:       {{ backup_sizes.results[idx].stdout }}
             Path:       {{ sorted_backups[idx].path }}
