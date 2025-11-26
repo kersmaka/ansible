@@ -18,7 +18,12 @@
   tasks:
     - name: Fail if backup_timestamp is set to default 'LATEST'
       fail:
-        msg: "❌ ERROR: You must specify the 'backup_timestamp' variable with the exact folder name (e.g., 20251126_201320) to restore from."
+        msg: |
+          ❌ ERROR: The 'backup_timestamp' variable must be set.
+          When launching this Job Template, please provide the backup folder name 
+          (e.g., 20251126_201320) as an Extra Variable.
+          
+          You can use the 'List Available AAP Backups' job to find valid timestamps.
       when: backup_timestamp == "LATEST"
 
     - name: Set full path to the backup directory
@@ -32,11 +37,12 @@
 
     - name: Fail if backup directory does not exist
       fail:
-        msg: "❌ ERROR: The backup directory '{{ full_backup_path }}' does not exist. Check the timestamp variable."
+        msg: "❌ ERROR: The backup directory '{{ full_backup_path }}' does not exist. Check the timestamp variable you provided."
       when: not backup_dir_stat.stat.exists or not backup_dir_stat.stat.isdir
 
     - name: Stop AAP services before restore
       ansible.builtin.shell: |
+        # Use '--no-log' to prevent sensitive information from being logged in the Job output
         cd {{ aap_setup_dir }}
         ./setup.sh -b --no-log --stop
       args:
@@ -47,12 +53,11 @@
 
     - name: Run AAP setup script with restore flag
       ansible.builtin.shell: |
-        # The setup.sh script handles the restoration process by unpacking the archives
-        # located in the specified --restore-from directory.
+        # The setup.sh script handles the restoration process. It unpacks the archives
+        # located in the specified --restore-from directory and updates the configuration.
         ./setup.sh -b --no-log --restore-from {{ full_backup_path }}
       args:
         chdir: "{{ aap_setup_dir }}"
-        # Set a long timeout for the restoration process
         # Restoration can take significant time depending on database size.
         timeout: 3600 
       changed_when: true
@@ -61,4 +66,4 @@
 
     - name: Check restoration status
       debug:
-        msg: "✅ AAP restoration is complete. The system is restarting with data from backup timestamp: {{ backup_timestamp }}"
+        msg: "✅ AAP restoration is complete. The system is restarting with data from backup timestamp: {{ backup_timestamp }}. Access the web interface once services are fully online."
