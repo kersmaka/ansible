@@ -1,17 +1,18 @@
 ---
 - name: Restore Ansible Automation Platform from Backup
-  # Set hosts to the target server where AAP is installed (e.g., [automation_controller])
-  # If running against the server itself, 'localhost' is also an option, but 'all' works fine
-  # if your inventory only contains the AAP host.
+  # Setting 'ansible_user' here forces the SSH connection to use the 'aap' user,
+  # bypassing the need for an external 'sudo' password on the initial connection.
   hosts: all 
   gather_facts: yes
   vars:
     # --- REQUIRED INPUT ---
     # Set this to the timestamp folder name of the backup you wish to restore.
-    # Examples: 20251126_201320 or 20251126_201557
     backup_timestamp: "LATEST" # Default to 'LATEST', which you should override in the prompt
     
     # --- CONFIGURATION ---
+    # The user Ansible should SSH as (must be the owner of the containerized install)
+    ansible_user: "aap" 
+    
     # Base path for the AAP setup bundle (contains inventory and playbooks)
     aap_setup_dir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
     
@@ -40,9 +41,9 @@
       stat:
         path: "{{ full_backup_path }}"
       register: backup_dir_stat
-      # The stat module should run as the user who owns the backup files (aap)
-      become: yes
-      become_user: aap 
+      # The stat module should run as the user who owns the backup files (aap), 
+      # which is the user we are now connecting as (ansible_user: aap). 
+      # No 'become' is needed here, simplifying the process.
 
     - name: Fail if backup directory does not exist
       fail:
@@ -50,28 +51,17 @@
       when: not backup_dir_stat.stat.exists or not backup_dir_stat.stat.isdir
 
     - name: Restore AAP using the containerized installer's playbook (FQCN method)
-      # Execution is correct, but we need to ensure the AAP user is executing the command,
-      # which is handled by the overall SSH connection. We will use the 'shell' module
-      # with 'become_user: aap' to ensure the command is run in the correct user context 
-      # where the Podman containers are visible.
-      # 
-      # We are explicitly running the FQCN restore playbook, passing the necessary
-      # variables for the restore directory.
+      # We are running the shell command as the connected user ('aap').
+      # The FQCN playbook *itself* will handle any internal 'sudo' it needs (e.g., for service restart).
       ansible.builtin.shell: |
-        # Use '--skip-tags services' only if the internal playbook keeps failing 
-        # due to systemd unit management in your rootless environment. 
-        # This is a common workaround for this specific error.
+        # Ensure the command is executed as the 'aap' user, which owns the containers and setup bundle.
         ansible-playbook -i {{ aap_inventory_file }} ansible.containerized_installer.restore --extra-vars "restore_dir={{ full_backup_path }}" 
         
       args:
-        # CRUCIAL: Must run from the setup directory to correctly find the 'inventory' file 
-        # and allow the FQCN to resolve relative to the install directory's EE setup.
+        # CRUCIAL: Must run from the setup directory
         chdir: "{{ aap_setup_dir }}"
       changed_when: true
-      # Run as the 'aap' user, which owns the Podman containers and the setup bundle.
-      # This is the most critical fix for rootless/user-managed containers.
-      become: yes
-      become_user: aap 
+      # REMOVED 'become: yes' and 'become_user: aap' here to prevent the 'sudo: a password is required' error.
       timeout: 3600 
 
     - name: Check restoration status
