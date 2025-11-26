@@ -1,0 +1,111 @@
+---
+- name: List Available AAP Backups
+  hosts: all
+  gather_facts: yes
+  vars:
+    aap_path: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
+  tasks:
+    - name: Get list of available backups
+      find:
+        paths: "{{ aap_path }}/backups"
+        file_type: directory
+        patterns: "202*"
+      register: available_backups
+      become: yes
+      become_user: aap
+
+    - name: Fail if no backups found
+      fail:
+        msg: "❌ No backups found in {{ aap_path }}/backups/"
+      when: available_backups.matched == 0
+
+    - name: Sort backups by name (newest first)
+      set_fact:
+        sorted_backups: "{{ available_backups.files | sort(attribute='path', reverse=true) }}"
+
+    - name: Get backup details
+      set_fact:
+        backup_details: []
+
+    - name: Build backup details list
+      set_fact:
+        backup_details: "{{ backup_details + [item] }}"
+      vars:
+        item:
+          name: "{{ backup.path | basename }}"
+          date: "{{ backup.mtime | int | to_datetime('%Y-%m-%d %H:%M:%S') }}"
+          path: "{{ backup.path }}"
+      loop: "{{ sorted_backups }}"
+      loop_control:
+        loop_var: backup
+
+    - name: Count files in each backup
+      find:
+        paths: "{{ item.path }}"
+        patterns: "*.tar.gz"
+      register: backup_file_counts
+      loop: "{{ sorted_backups }}"
+      become: yes
+      become_user: aap
+
+    - name: Calculate total size for each backup
+      shell: "du -sh {{ item.path }} | cut -f1"
+      register: backup_sizes
+      loop: "{{ sorted_backups }}"
+      become: yes
+      become_user: aap
+      changed_when: false
+
+    - name: Display available backups
+      debug:
+        msg:
+          - "╔══════════════════════════════════════════════════════════════╗"
+          - "║              AVAILABLE AAP BACKUPS                           ║"
+          - "╚══════════════════════════════════════════════════════════════╝"
+          - ""
+          - "Host: {{ inventory_hostname }}"
+          - "Backup Location: {{ aap_path }}/backups"
+          - "Total Backups: {{ available_backups.matched }}"
+          - ""
+          - "{% for idx in range(sorted_backups | length) %}┌─ Backup #{{ idx + 1 }} {% if idx == 0 %}(LATEST){% endif %}"
+          - "│  Timestamp:  {{ sorted_backups[idx].path | basename }}"
+          - "│  Created:    {{ sorted_backups[idx].mtime | int | to_datetime('%Y-%m-%d %H:%M:%S') }}"
+          - "│  Files:      {{ backup_file_counts.results[idx].matched }} archives"
+          - "│  Total Size: {{ backup_sizes.results[idx].stdout }}"
+          - "│  Path:       {{ sorted_backups[idx].path }}"
+          - "└─────────────────────────────────────────────────────────────"
+          - "{% endfor %}"
+          - ""
+          - "To restore a backup, use the 'AAP Restore from Backup' job template"
+          - "and enter the timestamp shown above (e.g., {{ sorted_backups[0].path | basename }})"
+          - "or enter 'latest' to restore the most recent backup."
+
+    - name: Create backup summary file
+      copy:
+        content: |
+          Available AAP Backups
+          ====================
+          Generated: {{ ansible_date_time.date }} {{ ansible_date_time.time }}
+          Host: {{ inventory_hostname }}
+          Location: {{ aap_path }}/backups
+          
+          {% for idx in range(sorted_backups | length) %}
+          Backup #{{ idx + 1 }}{% if idx == 0 %} (LATEST){% endif %}
+          
+            Timestamp:  {{ sorted_backups[idx].path | basename }}
+            Created:    {{ sorted_backups[idx].mtime | int | to_datetime('%Y-%m-%d %H:%M:%S') }}
+            Files:      {{ backup_file_counts.results[idx].matched }} archives
+            Size:       {{ backup_sizes.results[idx].stdout }}
+            Path:       {{ sorted_backups[idx].path }}
+          
+          {% endfor %}
+        dest: "/var/log/aap-backups/available_backups.txt"
+        mode: '0644'
+      become: yes
+
+    - name: Summary
+      debug:
+        msg:
+          - "✓ Backup list saved to: /var/log/aap-backups/available_backups.txt"
+          - "✓ Use the timestamp (e.g., {{ sorted_backups[0].path | basename }}) to restore a specific backup"
+          - "✓ Or use 'latest' to restore the most recent backup"
