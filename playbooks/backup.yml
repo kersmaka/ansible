@@ -91,6 +91,31 @@
       changed_when: true
       failed_when: false
 
+    - name: Create timestamped backup subdirectory
+      file:
+        path: "{{ aap_path }}/backups/{{ hostvars['localhost']['backup_timestamp'] }}"
+        state: directory
+        mode: '0755'
+        owner: aap
+        group: aap
+      become: yes
+      when: backup_result.rc == 0
+
+    - name: Move backup files to timestamped subdirectory
+      shell: |
+        mv {{ aap_path }}/backups/*.tar.gz {{ aap_path }}/backups/{{ hostvars['localhost']['backup_timestamp'] }}/ 2>/dev/null || true
+      become: yes
+      become_user: aap
+      when: backup_result.rc == 0
+
+    - name: List backup files
+      find:
+        paths: "{{ aap_path }}/backups/{{ hostvars['localhost']['backup_timestamp'] }}"
+        patterns: "*.tar.gz"
+      register: backup_files
+      become: yes
+      when: backup_result.rc == 0
+
     - name: Save backup log
       copy:
         content: |
@@ -100,6 +125,7 @@
           Date: {{ ansible_date_time.date }}
           Time: {{ ansible_date_time.time }}
           Directory: {{ aap_path }}
+          Backup Location: {{ aap_path }}/backups/{{ hostvars['localhost']['backup_timestamp'] }}
           Return Code: {{ backup_result.rc }}
           
           === COMMAND ===
@@ -126,11 +152,12 @@
           - "=== Backup Complete ==="
           - "Host: {{ inventory_hostname }}"
           - "Return Code: {{ backup_result.rc }}"
+          - "Backup Location: {{ aap_path }}/backups/{{ hostvars['localhost']['backup_timestamp'] }}"
           - "Log: {{ backup_log_dir }}/backup_{{ hostvars['localhost']['backup_timestamp'] }}.log"
 
     - name: Success
       debug:
-        msg: "✓ Backup completed successfully on {{ inventory_hostname }}!"
+        msg: "✓ Backup completed successfully on {{ inventory_hostname }}! {{ backup_files.matched | default(0) }} files saved."
       when: backup_result.rc == 0
 
     - name: Warning on error
