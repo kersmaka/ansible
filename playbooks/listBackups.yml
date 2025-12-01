@@ -1,10 +1,12 @@
+---
 - name: Restore Ansible Automation Platform
   hosts: all
   gather_facts: yes
   vars:
-    # Set the path to the .tar.gz backup file you wish to restore.
-    # *** YOU MUST CHANGE THIS TO THE CORRECT PATH FOR YOUR RESTORE ***
-    restore_backup_file: "{{ aap_path }}/backups/20251126_173000/aap_backup_20251126_173000.tar.gz" 
+    # Set the path to the backup directory or file you wish to restore.
+    # CHANGED: Updated to point to the directory containing component backups (20251126_201557)
+    restore_backup_file: "{{ aap_path }}/backups/20251126_201557" 
+    
   tasks:
     - name: Skip hosts without AAP installation
       meta: end_host
@@ -16,7 +18,7 @@
           - "=== Starting AAP Restore ==="
           - "Host: {{ inventory_hostname }}"
           - "Directory: {{ aap_path }}"
-          - "Backup File: {{ restore_backup_file }}"
+          - "Backup Location: {{ restore_backup_file }}"
 
     - name: Verify inventory file exists
       stat:
@@ -28,24 +30,24 @@
         msg: "Inventory file not found at {{ aap_path }}/inventory"
       when: not inventory_file.stat.exists
 
-    - name: Verify backup file exists
+    - name: Verify backup file/directory exists
       stat:
         path: "{{ restore_backup_file }}"
       register: backup_file
       
-    - name: Fail if backup file missing
+    - name: Fail if backup file/directory missing
       fail:
-        msg: "Backup file not found at {{ restore_backup_file }}. Please update the 'restore_backup_file' variable."
+        msg: "Backup location not found at {{ restore_backup_file }}. Please update the 'restore_backup_file' variable."
       when: not backup_file.stat.exists
 
     - name: Display restore command
       debug:
         msg: 
-          - "Command: cd {{ aap_path }} && ansible-playbook -i inventory ansible.containerized_installer.restore -e backup_file={{ restore_backup_file }}"
+          - "Command: time cd {{ aap_path }} && ansible-playbook -i inventory ansible.containerized_installer.restore -kK -e backup_file={{ restore_backup_file }}"
 
-    - name: Run AAP containerized restore
+    - name: Run AAP containerized restore with -kK and time
       shell: |
-        ansible-playbook -i inventory ansible.containerized_installer.restore \
+        time ansible-playbook -i inventory ansible.containerized_installer.restore -kK \
           -e backup_file={{ restore_backup_file | quote }} 2>&1
       args:
         chdir: "{{ aap_path }}"
