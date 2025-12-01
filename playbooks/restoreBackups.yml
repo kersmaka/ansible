@@ -5,15 +5,10 @@
   tasks:
     - name: Check for AAP installation directory
       stat:
-        path: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
+        aap_path: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
       register: aap_dir_check
       ignore_errors: yes
 
-    - name: Register host with AAP installation
-      set_fact:
-        has_aap: true
-        aap_path: "{{ aap_dir_check.stat.path if aap_dir_check.stat.exists else (aap_search.files[0].path if aap_search.files is defined and aap_search.files | length > 0 else '') }}"
-      when: aap_dir_check.stat.exists or (aap_search.files is defined and aap_search.files | length > 0)
 
     - name: Run AAP containerized restore
       shell: |
