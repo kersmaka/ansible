@@ -15,7 +15,7 @@
         aap_path: "{{ aap_dir_check.stat.path if aap_dir_check.stat.exists else (aap_search.files[0].path if aap_search.files is defined and aap_search.files | length > 0 else '') }}"
       when: aap_dir_check.stat.exists or (aap_search.files is defined and aap_search.files | length > 0)
 
-    - name: Run AAP containerized backup
+    - name: Run AAP containerized restore
       shell: |
         cd {{ aap_path }}
         ansible-playbook -i inventory ansible.containerized_installer.restore 2>&1
@@ -24,6 +24,11 @@
         executable: /bin/bash
       become: yes
       become_user: aap
-      register: backup_result
+      register: restore_result
       changed_when: true
       failed_when: false
+
+    - name: Display restore output summary
+      debug:
+        msg: "{{ restore_result.stdout_lines[:30] }}"
+      when: restore_result.stdout_lines is defined    
