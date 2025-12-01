@@ -1,6 +1,6 @@
 ---
 - name: Find Latest AAP Backup and Run Restore
-  hosts: aap_host # <== CHANGE THIS
+  hosts: aap26Fresh # <== CHANGE THIS
   gather_facts: no
   vars:
     # --- FIXED VARIABLES ---
