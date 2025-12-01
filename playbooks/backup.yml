@@ -1,3 +1,4 @@
+---
 - name: Find AAP Installation Host
   hosts: all
   gather_facts: no
@@ -27,8 +28,6 @@
         has_aap: true
         aap_path: "{{ aap_dir_check.stat.path if aap_dir_check.stat.exists else (aap_search.files[0].path if aap_search.files is defined and aap_search.files | length > 0 else '') }}"
       when: aap_dir_check.stat.exists or (aap_search.files is defined and aap_search.files | length > 0)
-
----
 
 - name: Backup Ansible Automation Platform
   hosts: all
