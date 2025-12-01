@@ -15,10 +15,10 @@
 
     - name: Run AAP containerized restore
       shell: |
-        cd {{ path }}
+        cd {{ aap_path }}
         ansible-playbook -i inventory ansible.containerized_installer.restore
       args:
-        chdir: "{{ path }}"
+        chdir: "{{ aap_path }}"
         executable: /bin/bash
       become: yes
       become_user: aap
