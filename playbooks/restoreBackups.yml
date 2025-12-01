@@ -1,0 +1,55 @@
+---
+- name: Find Latest AAP Backup and Run Restore
+  hosts: aap_host # <== CHANGE THIS to your specific Ansible group or hostname
+  gather_facts: no
+  vars:
+    # --- FIXED VARIABLES ---
+    # The parent directory containing the timestamped backup folders
+    backup_root_dir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64/backups"
+    # The base path to the AAP installation bundle
+    aap_path: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
+    # -----------------------
+
+  tasks:
+    - name: 🔍 Find the latest .tar.gz backup file
+      ansible.builtin.find:
+        paths: "{{ backup_root_dir }}"
+        patterns: "*.tar.gz"
+        recurse: yes
+        sortby: ctime # Sort by creation time (or mtime for modification time)
+        list: true
+      register: latest_backup_search
+      become: yes # May require privilege to access the 'aap' user's files
+
+    - name: Fail if no backup files are found
+      ansible.builtin.fail:
+        msg: "No .tar.gz backup files found in {{ backup_root_dir }}."
+      when: latest_backup_search.files | length == 0
+
+    - name: Set fact for the latest backup file path
+      ansible.builtin.set_fact:
+        latest_backup_path: "{{ latest_backup_search.files | sort(attribute='ctime', reverse=true) | map(attribute='path') | first }}"
+
+    - name: Display the backup file being used
+      ansible.builtin.debug:
+        msg: "Restoring AAP using the latest backup file: {{ latest_backup_path }}"
+
+    - name: ⚙️ Run containerized restore with latest backup
+      ansible.builtin.shell: |
+        cd {{ aap_path }}
+        ansible-playbook -i inventory ansible.containerized_installer.restore -e @{{ latest_backup_path }} 2>&1
+      args:
+        chdir: "{{ aap_path }}"
+        executable: /bin/bash
+      become: yes
+      become_user: aap # Run the restore command as the 'aap' user
+      register: restore_output
+      changed_when: true
+      failed_when: false
+
+    - name: Display restore output summary
+      ansible.builtin.debug:
+        msg: |
+          Restore Return Code: {{ restore_output.rc }}
+          First 10 Lines of Output:
+          {{ restore_output.stdout_lines[:10] | join('\n') }}
