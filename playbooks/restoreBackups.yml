@@ -1,75 +1,29 @@
 ---
-- name: Find Latest AAP Backup and Run Restore
-  hosts: aap26Fresh # <== CHANGE THIS
+- name: Find AAP Installation Host
+  hosts: aap26Fresh
   gather_facts: no
-  vars:
-    # --- FIXED VARIABLES ---
-    backup_root_dir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64/backups"
-    aap_path: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
-    temp_inventory_path: "/tmp/aap_restore_inventory"
-    # -----------------------
-
   tasks:
-    # 1. CLEAN INVENTORY FILE COPY (CORRECTED TASK)
-    - name: 🧹 Create a clean copy of the inventory to bypass encoding issues
-      ansible.builtin.shell: |
-        # 1. Copy the inventory file locally on the remote host
-        cp "{{ aap_path }}/inventory" "{{ temp_inventory_path }}"
-        # 2. Sanitize the copy with iconv to ensure clean ASCII/UTF-8
-        iconv -c -f UTF-8 -t ASCII "{{ temp_inventory_path }}" -o "{{ temp_inventory_path }}.clean"
-        mv "{{ temp_inventory_path }}.clean" "{{ temp_inventory_path }}"
-      become: yes
-      become_user: aap
-      register: copy_result
-      changed_when: true # Assume change to run iconv
+    - name: Check for AAP installation directory
+      stat:
+        path: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
+      register: aap_dir_check
+      ignore_errors: yes
 
-    # 2. FIND BACKUP FILE (unchanged)
-    - name: 🔍 Find the latest .tar.gz backup file
-      ansible.builtin.find:
-        paths: "{{ backup_root_dir }}"
-        patterns: "*.tar.gz"
-        recurse: yes
-      register: latest_backup_search
-      become: yes
+    - name: Register host with AAP installation
+      set_fact:
+        has_aap: true
+        aap_path: "{{ aap_dir_check.stat.path if aap_dir_check.stat.exists else (aap_search.files[0].path if aap_search.files is defined and aap_search.files | length > 0 else '') }}"
+      when: aap_dir_check.stat.exists or (aap_search.files is defined and aap_search.files | length > 0)
 
-    - name: Fail if no backup files are found
-      ansible.builtin.fail:
-        msg: "No .tar.gz backup files found in {{ backup_root_dir }}."
-      when: latest_backup_search.files | length == 0
-
-    - name: Set fact for the latest backup file path
-      ansible.builtin.set_fact:
-        latest_backup_path: "{{ latest_backup_search.files | sort(attribute='mtime', reverse=true) | map(attribute='path') | first }}"
-
-    - name: Display the backup file being used
-      ansible.builtin.debug:
-        msg: "Restoring AAP using the latest backup file: {{ latest_backup_path }}"
-
-    # 3. RUN RESTORE COMMAND (using the temporary inventory path)
-    - name: ⚙️ Run containerized restore with latest backup
-      ansible.builtin.shell: |
+    - name: Run AAP containerized backup
+      shell: |
         cd {{ aap_path }}
-        # Use the CLEANED INVENTORY file at the temporary path
-        ansible-playbook -i {{ temp_inventory_path }} ansible.containerized_installer.restore -e @{{ latest_backup_path }} 2>&1
+        ansible-playbook -i inventory ansible.containerized_installer.restore 2>&1
       args:
         chdir: "{{ aap_path }}"
         executable: /bin/bash
       become: yes
       become_user: aap
-      register: restore_output
+      register: backup_result
       changed_when: true
       failed_when: false
-
-    - name: Display restore output summary
-      ansible.builtin.debug:
-        msg: |
-          Restore Return Code: {{ restore_output.rc }}
-          First 10 Lines of Output:
-          {{ restore_output.stdout_lines[:10] | join('\n') }}
-
-    # 4. CLEANUP (unchanged)
-    - name: 🗑️ Remove temporary inventory file
-      ansible.builtin.file:
-        path: "{{ temp_inventory_path }}"
-        state: absent
-      become: yes
