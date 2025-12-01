@@ -1,6 +1,6 @@
 ---
 - name: Find Latest AAP Backup and Run Restore
-  hosts: aap_host # <== CHANGE THIS to your specific Ansible group or hostname
+  hosts: all # <== CHANGE THIS to your specific Ansible group or hostname
   gather_facts: no
   vars:
     # --- FIXED VARIABLES ---
