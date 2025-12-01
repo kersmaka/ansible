@@ -1,4 +1,3 @@
----
 - name: Find AAP Installation Host
   hosts: all
   gather_facts: no
@@ -11,7 +10,7 @@
 
     - name: Search for AAP directory if default doesn't exist
       find:
-        paths: 
+        paths:
           - /home
           - /opt
           - /root
@@ -29,11 +28,15 @@
         aap_path: "{{ aap_dir_check.stat.path if aap_dir_check.stat.exists else (aap_search.files[0].path if aap_search.files is defined and aap_search.files | length > 0 else '') }}"
       when: aap_dir_check.stat.exists or (aap_search.files is defined and aap_search.files | length > 0)
 
+---
+
 - name: Backup Ansible Automation Platform
   hosts: all
   gather_facts: yes
   vars:
     backup_log_dir: "/var/log/aap-backups"
+    # Defines the timestamped directory where files will be copied
+    archive_dir: "{{ aap_path }}/backups/{{ hostvars['localhost']['backup_timestamp'] }}"
   tasks:
     - name: Get timestamp
       set_fact:
@@ -72,7 +75,7 @@
 
     - name: Display backup start
       debug:
-        msg: 
+        msg:
           - "=== Starting AAP Backup ==="
           - "Host: {{ inventory_hostname }}"
           - "Directory: {{ aap_path }}"
@@ -93,7 +96,7 @@
 
     - name: Create timestamped backup subdirectory
       file:
-        path: "{{ aap_path }}/backups/{{ hostvars['localhost']['backup_timestamp'] }}"
+        path: "{{ archive_dir }}"
         state: directory
         mode: '0755'
         owner: aap
@@ -101,16 +104,18 @@
       become: yes
       when: backup_result.rc == 0
 
-    - name: Move backup files to timestamped subdirectory
+    - name: Copy backup files to timestamped subdirectory (KEEPING originals in {{ aap_path }}/backups)
       shell: |
-        mv {{ aap_path }}/backups/*.tar.gz {{ aap_path }}/backups/{{ hostvars['localhost']['backup_timestamp'] }}/ 2>/dev/null || true
+        mv {{ aap_path }}/backups/*.tar.gz {{ archive_dir }}/
+        cp -p {{ archive_dir }}/*.tar.gz {{ aap_path }}/backups/
+        # Using cp -p preserves the ownership/permissions from the original run
       become: yes
       become_user: aap
       when: backup_result.rc == 0
 
-    - name: List backup files
+    - name: List backup files in the ARCHIVE location
       find:
-        paths: "{{ aap_path }}/backups/{{ hostvars['localhost']['backup_timestamp'] }}"
+        paths: "{{ archive_dir }}"
         patterns: "*.tar.gz"
       register: backup_files
       become: yes
@@ -125,16 +130,17 @@
           Date: {{ ansible_date_time.date }}
           Time: {{ ansible_date_time.time }}
           Directory: {{ aap_path }}
-          Backup Location: {{ aap_path }}/backups/{{ hostvars['localhost']['backup_timestamp'] }}
+          Original Backup Location: {{ aap_path }}/backups
+          Timestamped Archive Location: {{ archive_dir }}
           Return Code: {{ backup_result.rc }}
-          
+
           === COMMAND ===
           cd {{ aap_path }}
           ansible-playbook -i inventory ansible.containerized_installer.backup
-          
+
           === OUTPUT ===
           {{ backup_result.stdout }}
-          
+
           === ERRORS ===
           {{ backup_result.stderr }}
         dest: "{{ backup_log_dir }}/backup_{{ hostvars['localhost']['backup_timestamp'] }}.log"
@@ -152,7 +158,8 @@
           - "=== Backup Complete ==="
           - "Host: {{ inventory_hostname }}"
           - "Return Code: {{ backup_result.rc }}"
-          - "Backup Location: {{ aap_path }}/backups/{{ hostvars['localhost']['backup_timestamp'] }}"
+          - "Original Backup Location: {{ aap_path }}/backups"
+          - "Timestamped Archive Location: {{ archive_dir }}"
           - "Log: {{ backup_log_dir }}/backup_{{ hostvars['localhost']['backup_timestamp'] }}.log"
 
     - name: Success
