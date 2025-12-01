@@ -9,6 +9,9 @@
       register: aap_dir_check
       ignore_errors: yes
 
+    - name: Set aap path
+      set_fact:
+        aap_path: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
 
     - name: Run AAP containerized restore
       shell: |
