@@ -5,17 +5,17 @@
   tasks:
     - name: Check for AAP installation directory
       stat:
-        aap_path: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
+        path: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
       register: aap_dir_check
       ignore_errors: yes
 
 
     - name: Run AAP containerized restore
       shell: |
-        cd {{ aap_path }}
+        cd {{ path }}
         ansible-playbook -i inventory ansible.containerized_installer.restore
       args:
-        chdir: "{{ aap_path }}"
+        chdir: "{{ path }}"
         executable: /bin/bash
       become: yes
       become_user: aap
