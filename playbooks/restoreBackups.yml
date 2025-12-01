@@ -6,23 +6,24 @@
     # --- FIXED VARIABLES ---
     backup_root_dir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64/backups"
     aap_path: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
-    temp_inventory_path: "/tmp/aap_restore_inventory" # New temporary path
+    temp_inventory_path: "/tmp/aap_restore_inventory"
     # -----------------------
 
   tasks:
-    # 1. CLEAN INVENTORY FILE COPY (NEW STEP)
+    # 1. CLEAN INVENTORY FILE COPY (CORRECTED TASK)
     - name: 🧹 Create a clean copy of the inventory to bypass encoding issues
-      ansible.builtin.copy:
-        src: "{{ aap_path }}/inventory"
-        dest: "{{ temp_inventory_path }}"
-        mode: '0644'
-        owner: aap
-        group: aap
+      ansible.builtin.shell: |
+        # 1. Copy the inventory file locally on the remote host
+        cp "{{ aap_path }}/inventory" "{{ temp_inventory_path }}"
+        # 2. Sanitize the copy with iconv to ensure clean ASCII/UTF-8
+        iconv -c -f UTF-8 -t ASCII "{{ temp_inventory_path }}" -o "{{ temp_inventory_path }}.clean"
+        mv "{{ temp_inventory_path }}.clean" "{{ temp_inventory_path }}"
       become: yes
       become_user: aap
       register: copy_result
+      changed_when: true # Assume change to run iconv
 
-    # 2. FIND BACKUP FILE (from corrected step)
+    # 2. FIND BACKUP FILE (unchanged)
     - name: 🔍 Find the latest .tar.gz backup file
       ansible.builtin.find:
         paths: "{{ backup_root_dir }}"
@@ -44,7 +45,7 @@
       ansible.builtin.debug:
         msg: "Restoring AAP using the latest backup file: {{ latest_backup_path }}"
 
-    # 3. RUN RESTORE COMMAND (using the original, clean path)
+    # 3. RUN RESTORE COMMAND (using the temporary inventory path)
     - name: ⚙️ Run containerized restore with latest backup
       ansible.builtin.shell: |
         cd {{ aap_path }}
@@ -66,7 +67,7 @@
           First 10 Lines of Output:
           {{ restore_output.stdout_lines[:10] | join('\n') }}
 
-    # 4. CLEANUP (NEW STEP)
+    # 4. CLEANUP (unchanged)
     - name: 🗑️ Remove temporary inventory file
       ansible.builtin.file:
         path: "{{ temp_inventory_path }}"
