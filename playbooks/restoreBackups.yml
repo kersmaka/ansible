@@ -16,19 +16,13 @@
         paths: "{{ backup_root_dir }}"
         patterns: "*.tar.gz"
         recurse: yes
-        sortby: ctime # Sort by creation time (or mtime for modification time)
-        list: true
       register: latest_backup_search
-      become: yes # May require privilege to access the 'aap' user's files
-
-    - name: Fail if no backup files are found
-      ansible.builtin.fail:
-        msg: "No .tar.gz backup files found in {{ backup_root_dir }}."
-      when: latest_backup_search.files | length == 0
+      become: yes
 
     - name: Set fact for the latest backup file path
+      # Sort the list of files by 'mtime' (modification time) in reverse order (newest first)
       ansible.builtin.set_fact:
-        latest_backup_path: "{{ latest_backup_search.files | sort(attribute='ctime', reverse=true) | map(attribute='path') | first }}"
+        latest_backup_path: "{{ latest_backup_search.files | sort(attribute='mtime', reverse=true) | map(attribute='path') | first }}"
 
     - name: Display the backup file being used
       ansible.builtin.debug:
