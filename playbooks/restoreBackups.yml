@@ -14,14 +14,14 @@
         aap_path: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
 
     - name: Run AAP containerized restore
+      become: yes
+      become_user: aap
       shell: |
         cd {{ aap_path }}
         ansible-playbook -i inventory ansible.containerized_installer.restore
       args:
         chdir: "{{ aap_path }}"
         executable: /bin/bash
-      become: yes
-      become_user: aap
       register: restore_result
       changed_when: true
       failed_when: false
