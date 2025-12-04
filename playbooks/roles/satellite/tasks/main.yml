@@ -1,0 +1,12 @@
+---
+- name: Run arbitrary command on hosts
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Execute uptime command
+      ansible.builtin.command: uptime
+      register: command_output
+      
+    - name: Print command output
+      ansible.builtin.debug:
+        var: command_output.stdout_lines
