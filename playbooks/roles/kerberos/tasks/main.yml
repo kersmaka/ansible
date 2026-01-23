@@ -1,2 +1,30 @@
 ---
-# tasks file for kerberos
+- name: Ensure FreeIPA client package is installed
+  ansible.builtin.package:
+    name: ipa-client
+    state: present
+
+- name: Check if the node is already enrolled in FreeIPA
+  ansible.builtin.stat:
+    path: /etc/ipa/default.conf
+  register: ipa_config
+
+- name: Enroll node in FreeIPA domain
+  ansible.builtin.command:
+    cmd: >
+      ipa-client-install --unattended
+      --domain={{ ipa_domain | default('HOME.LAN') }}
+      --realm={{ ipa_realm | default('HOME.LAN') }}
+      --server={{ ipa_server }}
+      --principal={{ ipa_admin_user | default('admin') }}
+      --password={{ ipa_admin_password }}
+      --mkhomedir
+      --enable-ntp
+  when: not ipa_config.stat.exists
+  no_log: true  # Prevents password from leaking in logs
+
+- name: Ensure SSSD service is started and enabled
+  ansible.builtin.service:
+    name: sssd
+    state: started
+    enabled: yes
