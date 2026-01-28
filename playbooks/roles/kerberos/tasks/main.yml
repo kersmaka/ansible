@@ -10,16 +10,24 @@
   register: ipa_config
 
 - name: Enroll node in FreeIPA domain
-  community.general.ipa_client:
-    state: present
-    domain: "{{ ipa_domain | default('HOME.LAN') }}"
-    realm: "{{ ipa_realm | default('HOME.LAN') }}"
-    server: "{{ ipa_server }}"
-    principal: "{{ ipa_admin_user | default('admin') }}"
-    password: "{{ ipa_admin_password }}"
-    mkhomedir: yes
-    ntp_servers: "{{ ipa_server }}" # Explicitly sync time to the server
-  # The module is smart enough to skip if already enrolled
+  ansible.builtin.command:
+    cmd: >
+      ipa-client-install --unattended
+      --domain={{ ipa_domain | default('HOME.LAN') }}
+      --realm={{ ipa_realm | default('HOME.LAN') }}
+      --server={{ ipa_server }}
+      --principal={{ ipa_admin_user | default('admin') }}
+      --password={{ ipa_admin_password }}
+      --mkhomedir
+      --enable-ntp
+      --force-join
+  register: ipa_enroll_result
+  # We disable no_log briefly to debug; set to 'true' once fixed
+  no_log: false 
+  when: not ipa_config.stat.exists
+  failed_when: 
+    - ipa_enroll_result.rc != 0 
+    - "'already configured' not in ipa_enroll_result.stderr"
 
 - name: Ensure SSSD service is started and enabled
   ansible.builtin.service:
