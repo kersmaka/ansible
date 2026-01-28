@@ -3,13 +3,11 @@
 
 - name: Get a Vault secret via the API
   ansible.builtin.uri:
-    # URL remains the same for your HTTP setup
     url: "http://192.168.0.145:8200/v1/secret-recipes/data/krabby-patty"
     method: GET
     headers:
-      # AWX injects the credential into the VAULT_TOKEN environment variable
+      # This pulls the token injected by the AWX Credential
       X-Vault-Token: "{{ lookup('env', 'VAULT_TOKEN') }}"
-    # Removed 'body' as GET requests to Vault should not contain a body
     return_content: yes
     status_code: 200
   register: response
