@@ -1,9 +1,2 @@
 ---
 # vars file for vault_authentication
-
-# The full URL to the Vault API (Use HTTP since TLS is disabled)
-vault_url: "http://192.168.0.145:8200/v1/secret-recipes/data/krabby-patty"
-
-# Use the FRESH token generated from 'vault token create'
-# Ensure there are no leading/trailing spaces
-vault_token: "hvs.CAESIL3qYi-bSXVKsG9YwNGlaZmo2XJZjqkq41_M8z4AW6cnGh4KHGh2cy4zYUUyQ0ZqUzdjRFBHQjR5RFUzdXp1T28"

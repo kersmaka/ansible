@@ -1,19 +1,25 @@
+---
+# tasks file for vault_authentication
+
 - name: Get a Vault secret via the API
   ansible.builtin.uri:
-    url: http://192.168.0.145:8200/v1/secret-recipes/data/krabby-patty
-    validate_certs: false
+    # URL remains the same for your HTTP setup
+    url: "http://192.168.0.145:8200/v1/secret-recipes/data/krabby-patty"
     method: GET
     headers:
-      X-Vault-Token: "{{ vault_token }}" 
-    body: '{"data":{"key":"value"}}'
-    body_format: json
+      # AWX injects the credential into the VAULT_TOKEN environment variable
+      X-Vault-Token: "{{ lookup('env', 'VAULT_TOKEN') }}"
+    # Removed 'body' as GET requests to Vault should not contain a body
     return_content: yes
+    status_code: 200
   register: response
-  
-- name: Display the results
-  ansible.builtin.set_fact:
-    kerberos_password: "{{ response.json.data.data['formula']}}"
 
-- name: Display the results (optional)
+- name: Set secret as a fact
+  ansible.builtin.set_fact:
+    # Parsing the nested JSON structure specific to KV-v2
+    kerberos_password: "{{ response.json.data.data['formula'] }}"
+  no_log: true # Recommended: prevents the secret from leaking in Ansible logs
+
+- name: Display the results
   ansible.builtin.debug:
-    msg: "Kerberos Password: {{ kerberos_password }}"  
+    msg: "The retrieved secret (formula) is: {{ kerberos_password }}"
