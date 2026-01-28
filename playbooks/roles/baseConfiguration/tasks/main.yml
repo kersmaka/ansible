@@ -6,7 +6,7 @@
 
 - name: Register the system with RHSM
   ansible.builtin.command:
-    cmd: "subscription-manager register --username={{ rhsm_username }} --password={{ rhsm_password }}"
+    cmd: "subscription-manager register --username={{ rhsm_username }} --password={{ rhsm_password }} --force"
   register: rhsm_registration
   ignore_errors: true
 
