@@ -19,13 +19,13 @@
   ansible.builtin.command:
     cmd: "subscription-manager attach --auto"
   register: rhsm_attachment
-  when: rhsm_registration.rc == 0
+  when: rhsm_registration.rc == 0 or 'already registered' in rhsm_registration.stderr
   ignore_errors: true
 
 - name: Display attachment status
   ansible.builtin.debug:
     var: rhsm_attachment
-  when: rhsm_attachment.failed and rhsm_registration.rc == 0
+  when: rhsm_attachment is defined and rhsm_attachment.failed
 
 - name: Enable necessary repositories (e.g., baseos, appstream)
   ansible.builtin.command:
