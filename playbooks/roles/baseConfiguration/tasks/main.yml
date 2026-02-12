@@ -65,6 +65,24 @@
   become: true
   when: rhsm_registration.rc == 0 or rhsm_attachment.rc == 0
 
+- name: Install Git
+  ansible.builtin.dnf:
+    name: git
+    state: present
+  become: true
+  when: rhsm_registration.rc == 0 or rhsm_attachment.rc == 0
+
+- name: Verify Git installation
+  ansible.builtin.command: git --version
+  register: git_version
+  changed_when: false
+  when: rhsm_registration.rc == 0 or rhsm_attachment.rc == 0
+
+- name: Display Git version
+  ansible.builtin.debug:
+    var: git_version.stdout
+  when: git_version is defined and not git_version.failed
+
 - name: Disable SELinux permanently
   ansible.builtin.lineinfile:
     path: /etc/selinux/config
