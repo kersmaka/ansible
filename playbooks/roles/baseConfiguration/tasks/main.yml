@@ -57,34 +57,14 @@
     state: present
   become: true
   when: rhsm_registration.rc == 0 or rhsm_attachment.rc == 0
-
-- name: Disable SELinux permanently
-  ansible.builtin.lineinfile:
-    path: /etc/selinux/config
-    regexp: '^SELINUX='
-    line: 'SELINUX=disabled'
-  register: selinux_config
-
-- name: Disable SELinux for current session
-  ansible.builtin.command: setenforce 0
-  when: ansible_selinux.status == "enabled"
-  failed_when: false
-
-- name: Reboot if SELinux config changed
-  ansible.builtin.reboot:
-     msg: "Rebooting to apply SELinux changes"
-     reboot_timeout: 300
-  when: selinux_config.changed
-
-- name: Verify SELinux is disabled
-  ansible.builtin.command: getenforce
-  register: selinux_status
-  changed_when: false
-
-- name: Display SELinux status
-  ansible.builtin.debug:
-    msg: "SELinux status: {{ selinux_status.stdout }}"
         
+- name: Install Wget
+  ansible.builtin.dnf:
+    name: wget
+    state: present
+  become: true
+  when: rhsm_registration.rc == 0 or rhsm_attachment.rc == 0
+
 - name: Update all packages (dnf update)
   ansible.builtin.dnf:
     name: "*"
