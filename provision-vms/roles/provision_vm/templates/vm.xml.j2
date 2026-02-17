@@ -1,0 +1,65 @@
+<domain type='kvm'>
+  <name>{{ inventory_hostname }}</name>
+  <memory unit='MiB'>{{ vm_memory_mb }}</memory>
+  <currentMemory unit='MiB'>{{ vm_memory_mb }}</currentMemory>
+  <vcpu placement='static'>{{ vm_vcpus }}</vcpu>
+
+  <os>
+    <type arch='x86_64' machine='pc-q35-rhel9.0.0'>hvm</type>
+    <boot dev='hd'/>
+  </os>
+
+  <features>
+    <acpi/>
+    <apic/>
+  </features>
+
+  <cpu mode='host-passthrough' check='none' migratable='on'/>
+
+  <clock offset='utc'>
+    <timer name='rtc' tickpolicy='catchup'/>
+    <timer name='pit' tickpolicy='delay'/>
+    <timer name='hpet' present='no'/>
+  </clock>
+
+  <devices>
+    <emulator>/usr/bin/qemu-system-x86_64</emulator>
+
+    <!-- Main disk -->
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='{{ base_image_dir }}/{{ inventory_hostname }}.qcow2'/>
+      <target dev='vda' bus='virtio'/>
+    </disk>
+
+    <!-- Cloud-init ISO -->
+    <disk type='file' device='cdrom'>
+      <driver name='qemu' type='raw'/>
+      <source file='{{ base_image_dir }}/{{ inventory_hostname }}-cloud-init.iso'/>
+      <target dev='sda' bus='sata'/>
+      <readonly/>
+    </disk>
+
+    <!-- Network -->
+    <interface type='network'>
+      <source network='{{ vm_network }}'/>
+      <model type='virtio'/>
+    </interface>
+
+    <!-- Console -->
+    <serial type='pty'>
+      <target port='0'/>
+    </serial>
+    <console type='pty'>
+      <target type='serial' port='0'/>
+    </console>
+
+    <!-- Video -->
+    <video>
+      <model type='vga' vram='16384' heads='1'/>
+    </video>
+
+    <graphics type='vnc' port='-1' autoport='yes'/>
+
+  </devices>
+</domain>

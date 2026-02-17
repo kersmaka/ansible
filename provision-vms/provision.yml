@@ -1,0 +1,23 @@
+---
+- name: Provision RHEL VMs using virsh and qcow2
+  hosts: vms
+  gather_facts: false
+  serial: 3   # provision 3 at a time
+
+  pre_tasks:
+    - name: Verify KVM host is reachable
+      ansible.builtin.ping:
+      delegate_to: kvm_host
+
+  roles:
+    - provision_vm
+
+  post_tasks:
+    - name: Verify VMs are reachable
+      ansible.builtin.ping:
+      retries: 5
+      delay: 10
+
+    - name: Print VM summary
+      ansible.builtin.debug:
+        msg: "VM {{ inventory_hostname }} provisioned at {{ vm_ip }}"

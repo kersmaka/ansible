@@ -1,0 +1,178 @@
+---
+- name: Install required packages on KVM host
+  ansible.builtin.dnf:
+    name:
+      - qemu-kvm
+      - libvirt
+      - virt-install
+      - genisoimage
+      - cloud-utils
+      - python3-libvirt
+      - python3-lxml
+    state: present
+  delegate_to: kvm_host
+
+- name: Ensure libvirtd is running
+  ansible.builtin.systemd:
+    name: libvirtd
+    state: started
+    enabled: true
+  delegate_to: kvm_host
+
+- name: Check if base image exists
+  ansible.builtin.stat:
+    path: "{{ base_image_dir }}/{{ base_image_name }}"
+  register: base_image_stat
+  delegate_to: kvm_host
+
+- name: Download base qcow2 image
+  ansible.builtin.get_url:
+    url: "{{ base_image_url }}"
+    dest: "{{ base_image_dir }}/{{ base_image_name }}"
+    mode: '0644'
+  when: not base_image_stat.stat.exists
+  delegate_to: kvm_host
+
+- name: Check if VM disk already exists
+  ansible.builtin.stat:
+    path: "{{ base_image_dir }}/{{ inventory_hostname }}.qcow2"
+  register: vm_disk_stat
+  delegate_to: kvm_host
+
+- name: Create VM disk from base image
+  ansible.builtin.command:
+    cmd: >
+      qemu-img create -f qcow2 -b {{ base_image_dir }}/{{ base_image_name }}
+      -F qcow2 {{ base_image_dir }}/{{ inventory_hostname }}.qcow2
+      {{ vm_disk_size }}
+  when: not vm_disk_stat.stat.exists
+  delegate_to: kvm_host
+
+- name: Create cloud-init temp directory
+  ansible.builtin.file:
+    path: "/tmp/cloud-init-{{ inventory_hostname }}"
+    state: directory
+    mode: '0755'
+  delegate_to: kvm_host
+
+- name: Create cloud-init meta-data
+  ansible.builtin.copy:
+    dest: "/tmp/cloud-init-{{ inventory_hostname }}/meta-data"
+    content: |
+      instance-id: {{ inventory_hostname }}
+      local-hostname: {{ inventory_hostname }}.{{ vm_domain }}
+  delegate_to: kvm_host
+
+- name: Create cloud-init user-data
+  ansible.builtin.copy:
+    dest: "/tmp/cloud-init-{{ inventory_hostname }}/user-data"
+    content: |
+      #cloud-config
+      hostname: {{ inventory_hostname }}
+      fqdn: {{ inventory_hostname }}.{{ vm_domain }}
+
+      users:
+        - name: {{ vm_admin_user }}
+          groups: wheel
+          sudo: ALL=(ALL) NOPASSWD:ALL
+          shell: /bin/bash
+          ssh_authorized_keys:
+            - {{ vm_ssh_public_key }}
+
+      chpasswd:
+        list: |
+          {{ vm_admin_user }}:{{ vm_admin_password }}
+        expire: false
+
+      ssh_pwauth: false
+
+      package_update: true
+      packages:
+        - qemu-guest-agent
+        - python3
+
+      runcmd:
+        - systemctl enable --now qemu-guest-agent
+        - nmcli con mod "System eth0" ipv4.addresses {{ vm_ip }}/24
+        - nmcli con mod "System eth0" ipv4.gateway 192.168.122.1
+        - nmcli con mod "System eth0" ipv4.dns 192.168.122.1
+        - nmcli con mod "System eth0" ipv4.method manual
+        - nmcli con up "System eth0"
+
+      timezone: America/New_York
+
+      final_message: "VM {{ inventory_hostname }} is ready!"
+  delegate_to: kvm_host
+
+- name: Create cloud-init network-config
+  ansible.builtin.copy:
+    dest: "/tmp/cloud-init-{{ inventory_hostname }}/network-config"
+    content: |
+      version: 2
+      ethernets:
+        eth0:
+          dhcp4: false
+          addresses:
+            - {{ vm_ip }}/24
+          gateway4: 192.168.122.1
+          nameservers:
+            addresses:
+              - 192.168.122.1
+              - 8.8.8.8
+  delegate_to: kvm_host
+
+- name: Generate cloud-init ISO
+  ansible.builtin.command:
+    cmd: >
+      genisoimage -output {{ base_image_dir }}/{{ inventory_hostname }}-cloud-init.iso
+      -volid cidata -joliet -rock
+      /tmp/cloud-init-{{ inventory_hostname }}/user-data
+      /tmp/cloud-init-{{ inventory_hostname }}/meta-data
+      /tmp/cloud-init-{{ inventory_hostname }}/network-config
+  delegate_to: kvm_host
+
+- name: Generate VM XML from template
+  ansible.builtin.template:
+    src: vm.xml.j2
+    dest: "/tmp/{{ inventory_hostname }}.xml"
+  delegate_to: kvm_host
+
+- name: Check if VM is already defined
+  ansible.builtin.command:
+    cmd: virsh dominfo {{ inventory_hostname }}
+  register: vm_exists
+  failed_when: false
+  changed_when: false
+  delegate_to: kvm_host
+
+- name: Define VM from XML
+  ansible.builtin.command:
+    cmd: virsh define /tmp/{{ inventory_hostname }}.xml
+  when: vm_exists.rc != 0
+  delegate_to: kvm_host
+
+- name: Start the VM
+  ansible.builtin.command:
+    cmd: virsh start {{ inventory_hostname }}
+  when: vm_exists.rc != 0
+  delegate_to: kvm_host
+
+- name: Wait for VM to become reachable
+  ansible.builtin.wait_for:
+    host: "{{ vm_ip }}"
+    port: 22
+    delay: 10
+    timeout: 180
+  delegate_to: localhost
+
+- name: Clean up cloud-init temp files
+  ansible.builtin.file:
+    path: "/tmp/cloud-init-{{ inventory_hostname }}"
+    state: absent
+  delegate_to: kvm_host
+
+- name: Clean up XML temp file
+  ansible.builtin.file:
+    path: "/tmp/{{ inventory_hostname }}.xml"
+    state: absent
+  delegate_to: kvm_host

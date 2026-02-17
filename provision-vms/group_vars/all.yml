@@ -1,0 +1,20 @@
+---
+# Base image settings
+base_image_url: "https://download.rockylinux.org/pub/rocky/9/images/x86_64/Rocky-9-GenericCloud.latest.x86_64.qcow2"
+base_image_name: "rhel9-base.qcow2"
+base_image_dir: "/var/lib/libvirt/images"
+
+# VM defaults
+vm_vcpus: 2
+vm_memory_mb: 2048
+vm_disk_size: "20G"
+vm_network: "default"
+vm_os_variant: "rhel9.0"
+
+# Cloud-init defaults
+vm_admin_user: "admin"
+vm_admin_password: "changeme"  # use ansible vault in production
+vm_ssh_public_key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+
+# DNS/domain
+vm_domain: "homelab.local"
