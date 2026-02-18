@@ -2,12 +2,15 @@
 - name: Provision and Configure RHEL 9 VM
   hosts: kvm_host
   become: true
+  # This line tells Ansible to load and decrypt your vault file
+  vars_files:
+    - vault.yml
   vars:
+    # Use the RHEL 9.7 path you specified
     source_image: "/mnt/storage/rhel_images/rhel-9.7-x86_64-kvm.qcow2"
     dest_image: "/home/ansible_admin/vms/qcow2/{{ vm_name }}.qcow2"
-    # Set these in your AAP Survey or Vault
-    rh_user: "your_redhat_user"
-    rh_password: "your_redhat_password"
+    # Note: rh_user/password vars are removed here because 
+    # you are calling vault_rh_user/password directly below.
 
   tasks:
     - name: Ensure destination directory exists
@@ -34,9 +37,9 @@
       ansible.builtin.command: >
         virt-customize -a {{ dest_image }}
         --hostname {{ vm_name }}
-        --run-command "subscription-manager register --username {{ rh_user }} --password {{ rh_password }} --auto-attach"
+        --run-command "subscription-manager register --username {{ vault_rh_user }} --password {{ vault_rh_password }} --auto-attach"
         --run-command "subscription-manager repos --enable 'rhel-9-for-x86_64-baseos-rpms' --enable 'rhel-9-for-x86_64-appstream-rpms'"
-        --run-command "subscription-manager release --set=9.2"
+        --run-command "subscription-manager release --set=9.7"
         --run-command "dnf update -y"
       when: vm_check.rc != 0
 
