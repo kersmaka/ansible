@@ -1,2 +1,47 @@
 ---
-# tasks file for provisionVM
+- name: Provision RHEL 9 KVM Virtual Machine
+  hosts: kvm_host
+  become: true
+  vars:
+    source_image: "/mnt/storage/rhel_images/rhel-9.7-x86_64-kvm.qcow2"
+    dest_image: "/home/ansible_admin/vms/qcow2/{{ vm_name }}.qcow2"
+    memory: 8192
+    vcpus: 4
+    network: "br0-network"
+
+  tasks:
+    - name: Ensure destination directory exists
+      ansible.builtin.file:
+        path: "/home/ansible_admin/vms/qcow2/"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Check if VM already exists
+      ansible.builtin.command: virsh dominfo {{ vm_name }}
+      register: vm_check
+      ignore_errors: true
+      changed_when: false
+
+    - name: Copy qcow2 image to destination
+      ansible.builtin.copy:
+        src: "{{ source_image }}"
+        dest: "{{ dest_image }}"
+        remote_src: true
+        force: false  # Prevents overwriting an existing disk
+      when: vm_check.rc != 0
+
+    - name: Run virt-install to import the VM
+      ansible.builtin.command: >
+        virt-install
+        --name {{ vm_name }}
+        --ram {{ memory }}
+        --vcpus {{ vcpus }}
+        --disk path={{ dest_image }},format=qcow2
+        --import
+        --os-variant rhel9.4
+        --network network={{ network }}
+        --graphics none
+        --noautoconsole
+      when: vm_check.rc != 0
