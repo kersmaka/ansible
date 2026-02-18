@@ -5,8 +5,8 @@
   vars:
     source_image: "/mnt/storage/rhel_images/rhel-9.7-x86_64-kvm.qcow2"
     dest_image: "/home/ansible_admin/vms/qcow2/{{ vm_name }}.qcow2"
-    memory: 8192
-    vcpus: 4
+    memory: 4000
+    vcpus: 2
     network: "br0-network"
 
   tasks:
