@@ -40,7 +40,7 @@
         --vcpus {{ vcpus }}
         --disk path={{ dest_image }},format=qcow2
         --import
-        --os-variant rhel9.4
+        --os-variant rhel9.0
         --network network={{ network }}
         --graphics none
         --noautoconsole
