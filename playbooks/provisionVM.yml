@@ -71,3 +71,8 @@
       ansible.builtin.debug:
         var: ip_output.stdout_lines
       when: vm_check.rc != 0
+
+    - name: Add new VM to dynamic inventory
+      ansible.builtin.add_host:
+        name: "{{ ip_output.stdout | trim }}"
+        groups: newly_provisioned_vms  
