@@ -71,8 +71,6 @@
         ansible_user: root # Adjust if you use a different admin user
         groups: newly_provisioned_vms
 
----
-
 # PLAY 2: Configure the Internal OS of the New VM
 - name: Configure Internal VM Settings
   hosts: newly_provisioned_vms
