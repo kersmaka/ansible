@@ -67,8 +67,9 @@
     - name: Add new VM to dynamic inventory
       ansible.builtin.add_host:
         name: "{{ vm_name }}"
-        ansible_host: "{{ ip_output.stdout | trim }}"
-        ansible_user: root # Adjust if you use a different admin user
+        # This regex_replace/trim ensures we ONLY get the IP address
+        ansible_host: "{{ ip_output.stdout | trim | regex_replace('\\s+', '') }}"
+        ansible_user: root
         groups: newly_provisioned_vms
 
 # PLAY 2: Configure the Internal OS of the New VM
