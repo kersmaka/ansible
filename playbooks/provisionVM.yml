@@ -1,21 +1,19 @@
 ---
-- name: Provision RHEL 9 KVM Virtual Machine
+- name: Provision and Configure RHEL 9 VM
   hosts: kvm_host
   become: true
   vars:
     source_image: "/mnt/storage/rhel_images/rhel-9.7-x86_64-kvm.qcow2"
     dest_image: "/home/ansible_admin/vms/qcow2/{{ vm_name }}.qcow2"
-    memory: 4000
-    vcpus: 2
-    network: "br0-network"
+    # Set these in your AAP Survey or Vault
+    rh_user: "your_redhat_user"
+    rh_password: "your_redhat_password"
 
   tasks:
     - name: Ensure destination directory exists
       ansible.builtin.file:
         path: "/home/ansible_admin/vms/qcow2/"
         state: directory
-        owner: root
-        group: root
         mode: '0755'
 
     - name: Check if VM already exists
@@ -29,19 +27,44 @@
         src: "{{ source_image }}"
         dest: "{{ dest_image }}"
         remote_src: true
-        force: false  # Prevents overwriting an existing disk
+        force: false
+      when: vm_check.rc != 0
+
+    - name: Inject Configuration into Disk Image
+      ansible.builtin.command: >
+        virt-customize -a {{ dest_image }}
+        --hostname {{ vm_name }}
+        --run-command "subscription-manager register --username {{ rh_user }} --password {{ rh_password }} --auto-attach"
+        --run-command "subscription-manager repos --enable 'rhel-9-for-x86_64-baseos-rpms' --enable 'rhel-9-for-x86_64-appstream-rpms'"
+        --run-command "subscription-manager release --set=9.2"
+        --run-command "dnf update -y"
       when: vm_check.rc != 0
 
     - name: Run virt-install to import the VM
       ansible.builtin.command: >
         virt-install
         --name {{ vm_name }}
-        --ram {{ memory }}
-        --vcpus {{ vcpus }}
+        --ram 4000
+        --vcpus 2
         --disk path={{ dest_image }},format=qcow2
         --import
         --os-variant rhel9.0
-        --network network={{ network }}
+        --network network=br0-network
         --graphics none
         --noautoconsole
+      when: vm_check.rc != 0
+
+    - name: Wait for 1 minute for VM to initialize
+      ansible.builtin.pause:
+        minutes: 1
+      when: vm_check.rc != 0
+
+    - name: Run IP check script
+      ansible.builtin.shell: "/home/tools/ipCheck.sh {{ vm_name }}"
+      register: ip_output
+      when: vm_check.rc != 0
+
+    - name: Display VM IP Information
+      ansible.builtin.debug:
+        var: ip_output.stdout_lines
       when: vm_check.rc != 0
