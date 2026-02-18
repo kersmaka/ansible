@@ -74,5 +74,10 @@
 
     - name: Add new VM to dynamic inventory
       ansible.builtin.add_host:
-        name: "{{ ip_output.stdout | trim }}"
-        groups: newly_provisioned_vms  
+        name: "{{ vm_name }}"
+        ansible_host: "{{ ip_output.stdout | trim }}"
+        groups: newly_provisioned_vms
+      # FIX: Only run this task if ip_output actually has stdout data
+      when: 
+        - vm_check.rc != 0
+        - ip_output.stdout is defined
