@@ -1,13 +1,16 @@
 ---
-# PLAY 1: Provision the VM on the KVM Host
-- name: Provision RHEL 9 VM
+- name: Provision and Configure RHEL 9 VM
   hosts: kvm_host
   become: true
+  # This line tells Ansible to load and decrypt your vault file
   vars_files:
     - vault.yml
   vars:
+    # Use the RHEL 9.7 path you specified
     source_image: "/mnt/storage/rhel_images/rhel-9.7-x86_64-kvm.qcow2"
     dest_image: "/home/ansible_admin/vms/qcow2/{{ vm_name }}.qcow2"
+    # Note: rh_user/password vars are removed here because 
+    # you are calling vault_rh_user/password directly below.
 
   tasks:
     - name: Ensure destination directory exists
@@ -54,64 +57,17 @@
         --noautoconsole
       when: vm_check.rc != 0
 
-    - name: Wait for VM to boot and obtain IP
+    - name: Wait for 1 minute for VM to initialize
       ansible.builtin.pause:
-        seconds: 45
+        minutes: 1
       when: vm_check.rc != 0
 
-    - name: Get VM IP address
+    - name: Run IP check script
       ansible.builtin.shell: "/home/tools/ipCheck.sh {{ vm_name }}"
       register: ip_output
-      changed_when: false
+      when: vm_check.rc != 0
 
-    - name: Add new VM to dynamic inventory
-      ansible.builtin.add_host:
-        name: "{{ vm_name }}"
-        # This regex_replace/trim ensures we ONLY get the IP address
-        ansible_host: "{{ ip_output.stdout | trim | regex_replace('\\s+', '') }}"
-        ansible_user: root
-        groups: newly_provisioned_vms
-
-# PLAY 2: Configure the Internal OS of the New VM
-- name: Configure Internal VM Settings
-  hosts: newly_provisioned_vms
-  become: true
-  gather_facts: true
-  tasks:
-    - name: Install Core Packages (Vim, Wget, Git)
-      ansible.builtin.dnf:
-        name:
-          - vim
-          - wget
-          - git
-        state: present
-
-    - name: Disable SELinux permanently
-      ansible.builtin.lineinfile:
-        path: /etc/selinux/config
-        regexp: '^SELINUX='
-        line: 'SELINUX=disabled'
-      register: selinux_config
-
-    - name: Disable SELinux for current session
-      ansible.builtin.command: setenforce 0
-      when: ansible_selinux.status is defined and ansible_selinux.status == "enabled"
-      failed_when: false
-
-    - name: Reboot if SELinux config changed
-      ansible.builtin.reboot:
-        msg: "Rebooting to apply SELinux changes"
-        reboot_timeout: 300
-      when: selinux_config.changed
-
-    - name: Verify SELinux is disabled
-      ansible.builtin.command: getenforce
-      register: selinux_status
-      changed_when: false
-
-    - name: Display VM Status Summary
+    - name: Display VM IP Information
       ansible.builtin.debug:
-        msg: 
-          - "VM Name: {{ inventory_hostname }}"
-          - "IP Address: {{ ansible_host }}"
-          - "SELinux: {{ selinux_status.stdout }}"
+        var: ip_output.stdout_lines
+      when: vm_check.rc != 0
