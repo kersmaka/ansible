@@ -1,0 +1,29 @@
+---
+- name: Remove KVM Virtual Machine
+  hosts: kvm_host
+  become: true
+  vars:
+    image_path: "/home/ansible_admin/vms/qcow2/{{ vm_name }}.qcow2"
+
+  tasks:
+    - name: Get VM status
+      community.libvirt.virt:
+        command: info
+      register: vm_info
+
+    - name: Shut down VM if running
+      community.libvirt.virt:
+        name: "{{ vm_name }}"
+        state: destroyed
+      when: vm_name in vm_info
+
+    - name: Undefine the VM
+      community.libvirt.virt:
+        name: "{{ vm_name }}"
+        command: undefine
+      when: vm_name in vm_info
+
+    - name: Remove the qcow2 disk image
+      ansible.builtin.file:
+        path: "{{ image_path }}"
+        state: absent
