@@ -37,7 +37,7 @@
       ansible.builtin.command: >
         virt-customize -a {{ dest_image }}
         --hostname {{ vm_name }}
-        --run-command "subscription-manager register --username {{ vault_rh_user }} --password {{ vault_rh_password }} --auto-attach"
+        --run-command "subscription-manager register --username {{ vault_rh_user }} --password '{{ vault_rh_password }}' --auto-attach"
         --run-command "subscription-manager repos --enable 'rhel-9-for-x86_64-baseos-rpms' --enable 'rhel-9-for-x86_64-appstream-rpms'"
         --run-command "subscription-manager release --set=9.7"
         --run-command "dnf update -y"
