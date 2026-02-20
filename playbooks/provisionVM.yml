@@ -83,6 +83,7 @@
         - ip_output.stdout is defined
 
     - name: Add new VM to static inventory file
+      delegate_to: kvm_host
       ansible.builtin.lineinfile:
         path: /home/aap/github/ansible/inventory
         insertafter: '^\[newly_provisioned_vms\]'
