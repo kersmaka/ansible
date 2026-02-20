@@ -1,5 +1,0 @@
-- name: 'Lower Countdown'
-  ansible.builtin.set_fact:
-  countdown: "{{ (countdown | int - 1) | int }}"
-  ansible.builtin.debug: 
-    msg: "{{ countdown }}"
