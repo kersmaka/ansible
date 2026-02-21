@@ -5,6 +5,21 @@
       - ansible_distribution == "RedHat"
       - ansible_distribution_major_version == "9"
     fail_msg: "This playbook requires RHEL 9"
+
+# --- REPOSITORY SETUP START ---
+- name: Install EPEL release (Required for podman-compose)
+  dnf:
+    name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
+    state: present
+    disable_gpg_check: true
+
+- name: Enable CRB repository
+  command: subscription-manager repos --enable codeready-builder-for-rhel-9-x86_64-rpms
+  register: crb_out
+  changed_when: "'enabled' in crb_out.stdout"
+  failed_when: false # Prevents failure if system isn't registered via subscription-manager
+# --- REPOSITORY SETUP END ---
+
 - name: Install Podman and related tools
   dnf:
     name:
@@ -17,6 +32,7 @@
       - fuse-overlayfs
       - containernetworking-plugins
     state: present
+
 - name: Enable and start Podman socket (rootless API)
   systemd:
     name: podman.socket
@@ -24,24 +40,29 @@
     state: started
     scope: user
   become: false
+
 - name: Enable Podman socket at system level (rootful)
   systemd:
     name: podman.socket
     enabled: true
     state: started
+
 - name: Configure /etc/containers/registries.conf
   copy:
     dest: /etc/containers/registries.conf
     content: |
       [registries.search]
       registries = ['registry.access.redhat.com', 'registry.redhat.io', 'docker.io']
+
       [registries.insecure]
       registries = []
+
       [registries.block]
       registries = []
     owner: root
     group: root
     mode: '0644'
+
 - name: Configure /etc/containers/storage.conf
   copy:
     dest: /etc/containers/storage.conf
@@ -50,13 +71,16 @@
       driver = "overlay"
       runroot = "/run/containers/storage"
       graphroot = "/var/lib/containers/storage"
+
       [storage.options]
       additionalimagestores = []
+
       [storage.options.overlay]
       mountopt = "nodev,metacopy=on"
     owner: root
     group: root
     mode: '0644'
+
 - name: Allow Podman traffic through firewalld
   firewalld:
     port: "{{ item }}"
@@ -66,6 +90,7 @@
   loop:
     - "8080/tcp"
     - "8443/tcp"
+
 - name: Ensure kernel modules for container networking are loaded
   modprobe:
     name: "{{ item }}"
@@ -73,6 +98,7 @@
   loop:
     - overlay
     - br_netfilter
+
 - name: Persist kernel modules across reboots
   copy:
     dest: /etc/modules-load.d/podman.conf
@@ -82,6 +108,7 @@
     owner: root
     group: root
     mode: '0644'
+
 - name: Set required sysctl parameters for container networking
   sysctl:
     name: "{{ item.key }}"
@@ -94,27 +121,33 @@
     - { key: "net.bridge.bridge-nf-call-iptables", value: "1" }
     - { key: "net.bridge.bridge-nf-call-ip6tables", value: "1" }
     - { key: "user.max_user_namespaces", value: "28633" }
+
 - name: Configure subuid for rootless containers
   lineinfile:
     path: /etc/subuid
-    line: "{{ ansible_user }}:100000:65536"
+    line: "root:100000:65536"
     create: true
+
 - name: Configure subgid for rootless containers
   lineinfile:
     path: /etc/subgid
-    line: "{{ ansible_user }}:100000:65536"
+    line: "root:100000:65536"
     create: true
+
 - name: Verify Podman installation
   command: podman --version
   register: podman_version
   changed_when: false
+
 - name: Print Podman version
   debug:
     msg: "Podman installed: {{ podman_version.stdout }}"
+
 - name: Run Podman system info check
   command: podman system info
   register: podman_info
   changed_when: false
+
 - name: Print Podman system info
   debug:
     msg: "{{ podman_info.stdout_lines }}"
