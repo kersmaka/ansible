@@ -7,7 +7,7 @@
     fail_msg: "This playbook requires RHEL 9"
 
 # --- 1. REPOSITORY SETUP ---
-- name: Install EPEL release (Required for podman-compose)
+- name: Install EPEL release
   dnf:
     name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
     state: present
@@ -19,8 +19,26 @@
   changed_when: "'enabled' in crb_out.stdout"
   failed_when: false
 
-# --- 2. INSTALLATION (Software + Libraries + Service) ---
-- name: Install Podman, Firewalld, and all dependencies
+# --- 2. THE FIREWALL FIX ---
+- name: Explicitly install firewalld packages
+  dnf:
+    name:
+      - firewalld
+      - python3-firewall
+    state: present
+
+- name: Force systemd to recognize new service files
+  systemd:
+    daemon_reload: true
+
+- name: Ensure firewalld is running and enabled
+  systemd:
+    name: firewalld
+    state: started
+    enabled: true
+
+# --- 3. CONTAINER TOOLS INSTALLATION ---
+- name: Install Podman and related tools
   dnf:
     name:
       - podman
@@ -31,24 +49,15 @@
       - slirp4netns
       - fuse-overlayfs
       - containernetworking-plugins
-      - firewalld         # The actual firewall service
-      - python3-firewall   # The Python library Ansible needs to manage firewalld
     state: present
 
-# --- 3. SERVICE MANAGEMENT ---
-- name: Ensure firewalld is running and enabled
-  systemd:
-    name: firewalld
-    state: started
-    enabled: true
-
-- name: Enable Podman socket at system level (rootful)
+# --- 4. SERVICE & CONFIG ---
+- name: Enable Podman socket at system level
   systemd:
     name: podman.socket
     enabled: true
     state: started
 
-# --- 4. CONFIGURATION FILES ---
 - name: Configure /etc/containers/registries.conf
   copy:
     dest: /etc/containers/registries.conf
@@ -83,7 +92,7 @@
     group: root
     mode: '0644'
 
-# --- 5. NETWORK & FIREWALL ---
+# --- 5. NETWORK & SYSTEM PARAMETERS ---
 - name: Allow Podman traffic through firewalld
   firewalld:
     port: "{{ item }}"
@@ -96,7 +105,7 @@
   loop_control:
     loop_var: item
 
-- name: Ensure kernel modules for container networking are loaded
+- name: Ensure kernel modules are loaded
   modprobe:
     name: "{{ item }}"
     state: present
@@ -104,7 +113,7 @@
     - overlay
     - br_netfilter
 
-- name: Persist kernel modules across reboots
+- name: Persist kernel modules
   copy:
     dest: /etc/modules-load.d/podman.conf
     content: |
@@ -114,7 +123,7 @@
     group: root
     mode: '0644'
 
-- name: Set required sysctl parameters for container networking
+- name: Set sysctl parameters
   sysctl:
     name: "{{ item.key }}"
     value: "{{ item.value }}"
@@ -136,7 +145,6 @@
     - subuid
     - subgid
 
-# --- 6. VERIFICATION ---
 - name: Verify Podman installation
   command: podman --version
   register: podman_version
