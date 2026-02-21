@@ -6,7 +6,7 @@
       - ansible_distribution_major_version == "9"
     fail_msg: "This playbook requires RHEL 9"
 
-# --- REPOSITORY SETUP START ---
+# --- REPOSITORY & DEPENDENCY SETUP ---
 - name: Install EPEL release (Required for podman-compose)
   dnf:
     name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
@@ -17,10 +17,9 @@
   command: subscription-manager repos --enable codeready-builder-for-rhel-9-x86_64-rpms
   register: crb_out
   changed_when: "'enabled' in crb_out.stdout"
-  failed_when: false # Prevents failure if system isn't registered via subscription-manager
-# --- REPOSITORY SETUP END ---
+  failed_when: false
 
-- name: Install Podman and related tools
+- name: Install Podman, related tools, and Python firewalld bindings
   dnf:
     name:
       - podman
@@ -31,7 +30,15 @@
       - slirp4netns
       - fuse-overlayfs
       - containernetworking-plugins
+      - python3-firewall  # Required for the firewalld module to work
     state: present
+
+# --- SERVICE CONFIGURATION ---
+- name: Ensure firewalld is running and enabled
+  systemd:
+    name: firewalld
+    state: started
+    enabled: true
 
 - name: Enable and start Podman socket (rootless API)
   systemd:
@@ -47,6 +54,7 @@
     enabled: true
     state: started
 
+# --- FILE CONFIGURATIONS ---
 - name: Configure /etc/containers/registries.conf
   copy:
     dest: /etc/containers/registries.conf
@@ -81,6 +89,7 @@
     group: root
     mode: '0644'
 
+# --- NETWORKING & SECURITY ---
 - name: Allow Podman traffic through firewalld
   firewalld:
     port: "{{ item }}"
@@ -90,6 +99,8 @@
   loop:
     - "8080/tcp"
     - "8443/tcp"
+  loop_control:
+    loop_var: item  # Fixes the loop variable collision warning
 
 - name: Ensure kernel modules for container networking are loaded
   modprobe:
@@ -122,18 +133,16 @@
     - { key: "net.bridge.bridge-nf-call-ip6tables", value: "1" }
     - { key: "user.max_user_namespaces", value: "28633" }
 
-- name: Configure subuid for rootless containers
+- name: Configure subuid/subgid for root user
   lineinfile:
-    path: /etc/subuid
+    path: "/etc/{{ item }}"
     line: "root:100000:65536"
     create: true
+  loop:
+    - subuid
+    - subgid
 
-- name: Configure subgid for rootless containers
-  lineinfile:
-    path: /etc/subgid
-    line: "root:100000:65536"
-    create: true
-
+# --- VERIFICATION ---
 - name: Verify Podman installation
   command: podman --version
   register: podman_version
