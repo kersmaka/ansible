@@ -11,11 +11,6 @@
       - python3-pip
       - jq
     state: present
-- name: Install hvac (Vault Python client)
-  pip:
-    name: hvac
-    state: present
-    extra_args: "--break-system-packages"
 - name: Ensure firewalld is running
   systemd:
     name: firewalld
