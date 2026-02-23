@@ -4,6 +4,28 @@
     name: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm"
     state: present
     disable_gpg_check: true
+- name: Install Nginx
+  dnf:
+    name: nginx
+    state: present
+  when: webserver == "nginx"
+- name: Install Apache
+  dnf:
+    name: httpd
+    state: present
+  when: webserver == "apache"
+- name: Ensure Nginx is running
+  systemd:
+    name: nginx
+    enabled: true
+    state: started
+  when: webserver == "nginx"
+- name: Ensure Apache is running
+  systemd:
+    name: httpd
+    enabled: true
+    state: started
+  when: webserver == "apache"
 - name: Install Certbot and plugin
   dnf:
     name:
