@@ -1,0 +1,97 @@
+---
+ name: Install Nginx
+ dnf:
+   name: nginx
+   state: present
+ name: Install firewalld and Python bindings
+ dnf:
+   name:
+     - firewalld
+     - python3-firewall
+   state: present
+ name: Ensure firewalld is running
+ systemd:
+   name: firewalld
+   enabled: true
+   state: started
+ name: Open HTTP port
+ firewalld:
+   service: http
+   permanent: true
+   state: enabled
+   immediate: true
+ name: Open HTTPS port
+ firewalld:
+   service: https
+   permanent: true
+   state: enabled
+   immediate: true
+ name: Create SSL directory
+ file:
+   path: /etc/nginx/ssl
+   state: directory
+   owner: root
+   group: nginx
+   mode: '0750'
+ name: Issue certificate from Vault
+ uri:
+   url: "{{ vault_addr }}/v1/{{ pki_int_mount }}/issue/{{ pki_role }}"
+   method: POST
+   headers:
+     X-Vault-Token: "{{ vault_token }}"
+   body_format: json
+   body:
+     common_name: "{{ domain }}"
+     alt_names: "www.{{ domain }}"
+     ttl: "{{ cert_ttl }}"
+     format: "pem"
+   status_code: [200]
+ register: issued_cert
+ name: Write certificate to disk
+ copy:
+   content: "{{ issued_cert.json.data.certificate }}\n{{ issued_cert.json.data.issuing_ca }}"
+   dest: "/etc/nginx/ssl/{{ domain }}.crt"
+   owner: root
+   group: nginx
+   mode: '0640'
+ name: Write private key to disk
+ copy:
+   content: "{{ issued_cert.json.data.private_key }}"
+   dest: "/etc/nginx/ssl/{{ domain }}.key"
+   owner: root
+   group: nginx
+   mode: '0640'
+ name: Write Nginx SSL config
+ copy:
+   dest: /etc/nginx/conf.d/ssl.conf
+   content: |
+     server {
+         listen 80;
+         server_name {{ domain }};
+         return 301 https://$host$request_uri;
+     }
+     server {
+         listen 443 ssl;
+         server_name {{ domain }};
+         ssl_certificate     /etc/nginx/ssl/{{ domain }}.crt;
+         ssl_certificate_key /etc/nginx/ssl/{{ domain }}.key;
+         ssl_protocols       TLSv1.2 TLSv1.3;
+         ssl_ciphers         HIGH:!aNULL:!MD5;
+         ssl_session_cache   shared:SSL:10m;
+         ssl_session_timeout 10m;
+         location / {
+             root   /usr/share/nginx/html;
+             index  index.html;
+         }
+     }
+ name: Enable and start Nginx
+ systemd:
+   name: nginx
+   enabled: true
+   state: restarted
+ name: Done
+ debug:
+   msg:
+     - "Certificate issued and Nginx configured for {{ domain }}"
+     - "Cert: /etc/nginx/ssl/{{ domain }}.crt"
+     - "Key:  /etc/nginx/ssl/{{ domain }}.key"
