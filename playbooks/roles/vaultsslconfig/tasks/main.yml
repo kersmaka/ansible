@@ -1,0 +1,263 @@
+---
+# ---------------------------------------------------------------
+# Install dependencies
+# ---------------------------------------------------------------
+- name: Install required packages
+  dnf:
+    name:
+      - nginx
+      - firewalld
+      - python3-firewall
+      - python3-pip
+      - jq
+    state: present
+- name: Install hvac (Vault Python client)
+  pip:
+    name: hvac
+    state: present
+    extra_args: "--break-system-packages"
+- name: Ensure firewalld is running
+  systemd:
+    name: firewalld
+    enabled: true
+    state: started
+- name: Open HTTP port
+  firewalld:
+    service: http
+    permanent: true
+    state: enabled
+    immediate: true
+- name: Open HTTPS port
+  firewalld:
+    service: https
+    permanent: true
+    state: enabled
+    immediate: true
+# ---------------------------------------------------------------
+# Enable Vault PKI Root
+# ---------------------------------------------------------------
+- name: Enable PKI secrets engine (root)
+  uri:
+    url: "{{ vault_addr }}/v1/sys/mounts/{{ pki_mount }}"
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    body_format: json
+    body:
+      type: "pki"
+    status_code: [200, 204, 400]
+  register: pki_mount_result
+- name: Tune PKI root TTL
+  uri:
+    url: "{{ vault_addr }}/v1/sys/mounts/{{ pki_mount }}/tune"
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    body_format: json
+    body:
+      max_lease_ttl: "{{ ca_ttl }}"
+    status_code: [200, 204]
+- name: Generate root CA
+  uri:
+    url: "{{ vault_addr }}/v1/{{ pki_mount }}/root/generate/internal"
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    body_format: json
+    body:
+      common_name: "{{ ca_common_name }}"
+      ttl: "{{ ca_ttl }}"
+      key_type: "rsa"
+      key_bits: 4096
+    status_code: [200, 204]
+  register: root_ca
+- name: Configure root CA URLs
+  uri:
+    url: "{{ vault_addr }}/v1/{{ pki_mount }}/config/urls"
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    body_format: json
+    body:
+      issuing_certificates: "{{ vault_addr }}/v1/{{ pki_mount }}/ca"
+      crl_distribution_points: "{{ vault_addr }}/v1/{{ pki_mount }}/crl"
+    status_code: [200, 204]
+# ---------------------------------------------------------------
+# Enable Vault PKI Intermediate
+# ---------------------------------------------------------------
+- name: Enable PKI secrets engine (intermediate)
+  uri:
+    url: "{{ vault_addr }}/v1/sys/mounts/{{ pki_int_mount }}"
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    body_format: json
+    body:
+      type: "pki"
+    status_code: [200, 204, 400]
+- name: Tune PKI intermediate TTL
+  uri:
+    url: "{{ vault_addr }}/v1/sys/mounts/{{ pki_int_mount }}/tune"
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    body_format: json
+    body:
+      max_lease_ttl: "{{ int_ca_ttl }}"
+    status_code: [200, 204]
+- name: Generate intermediate CSR
+  uri:
+    url: "{{ vault_addr }}/v1/{{ pki_int_mount }}/intermediate/generate/internal"
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    body_format: json
+    body:
+      common_name: "{{ int_ca_common_name }}"
+      ttl: "{{ int_ca_ttl }}"
+      key_type: "rsa"
+      key_bits: 4096
+    status_code: [200]
+  register: int_csr
+- name: Sign intermediate CSR with root CA
+  uri:
+    url: "{{ vault_addr }}/v1/{{ pki_mount }}/root/sign-intermediate"
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    body_format: json
+    body:
+      csr: "{{ int_csr.json.data.csr }}"
+      common_name: "{{ int_ca_common_name }}"
+      ttl: "{{ int_ca_ttl }}"
+      format: "pem_bundle"
+    status_code: [200]
+  register: signed_int
+- name: Set signed intermediate certificate in Vault
+  uri:
+    url: "{{ vault_addr }}/v1/{{ pki_int_mount }}/intermediate/set-signed"
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    body_format: json
+    body:
+      certificate: "{{ signed_int.json.data.certificate }}"
+    status_code: [200, 204]
+- name: Configure intermediate CA URLs
+  uri:
+    url: "{{ vault_addr }}/v1/{{ pki_int_mount }}/config/urls"
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    body_format: json
+    body:
+      issuing_certificates: "{{ vault_addr }}/v1/{{ pki_int_mount }}/ca"
+      crl_distribution_points: "{{ vault_addr }}/v1/{{ pki_int_mount }}/crl"
+    status_code: [200, 204]
+# ---------------------------------------------------------------
+# Create PKI role
+# ---------------------------------------------------------------
+- name: Create PKI role for domain
+  uri:
+    url: "{{ vault_addr }}/v1/{{ pki_int_mount }}/roles/{{ pki_role }}"
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    body_format: json
+    body:
+      allowed_domains: "{{ allowed_domains }}"
+      allow_subdomains: true
+      allow_bare_domains: true
+      max_ttl: "{{ cert_ttl }}"
+      key_type: "rsa"
+      key_bits: 2048
+      require_cn: true
+    status_code: [200, 204]
+# ---------------------------------------------------------------
+# Issue certificate for domain
+# ---------------------------------------------------------------
+- name: Create SSL directory
+  file:
+    path: /etc/nginx/ssl
+    state: directory
+    owner: root
+    group: nginx
+    mode: '0750'
+- name: Issue certificate from Vault
+  uri:
+    url: "{{ vault_addr }}/v1/{{ pki_int_mount }}/issue/{{ pki_role }}"
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_token }}"
+    body_format: json
+    body:
+      common_name: "{{ domain }}"
+      alt_names: "www.{{ domain }}"
+      ttl: "{{ cert_ttl }}"
+      format: "pem"
+    status_code: [200]
+  register: issued_cert
+- name: Write certificate to disk
+  copy:
+    content: "{{ issued_cert.json.data.certificate }}\n{{ issued_cert.json.data.issuing_ca }}"
+    dest: "/etc/nginx/ssl/{{ domain }}.crt"
+    owner: root
+    group: nginx
+    mode: '0640'
+- name: Write private key to disk
+  copy:
+    content: "{{ issued_cert.json.data.private_key }}"
+    dest: "/etc/nginx/ssl/{{ domain }}.key"
+    owner: root
+    group: nginx
+    mode: '0640'
+- name: Write root CA cert to disk
+  copy:
+    content: "{{ root_ca.json.data.certificate }}"
+    dest: "/etc/nginx/ssl/root_ca.crt"
+    owner: root
+    group: nginx
+    mode: '0644'
+# ---------------------------------------------------------------
+# Configure Nginx
+# ---------------------------------------------------------------
+- name: Write Nginx SSL config
+  copy:
+    dest: /etc/nginx/conf.d/ssl.conf
+    content: |
+      server {
+          listen 80;
+          server_name {{ domain }};
+          return 301 https://$host$request_uri;
+      }
+      server {
+          listen 443 ssl;
+          server_name {{ domain }};
+          ssl_certificate     /etc/nginx/ssl/{{ domain }}.crt;
+          ssl_certificate_key /etc/nginx/ssl/{{ domain }}.key;
+          ssl_protocols       TLSv1.2 TLSv1.3;
+          ssl_ciphers         HIGH:!aNULL:!MD5;
+          ssl_session_cache   shared:SSL:10m;
+          ssl_session_timeout 10m;
+          location / {
+              root   /usr/share/nginx/html;
+              index  index.html;
+          }
+      }
+- name: Enable and start Nginx
+  systemd:
+    name: nginx
+    enabled: true
+    state: restarted
+# ---------------------------------------------------------------
+# Print trust info
+# ---------------------------------------------------------------
+- name: Print root CA trust instructions
+  debug:
+    msg:
+      - "Nginx is now running with a Vault-issued TLS cert."
+      - "Root CA cert saved to: /etc/nginx/ssl/root_ca.crt"
+      - "To trust on other Linux machines:"
+      - "  1. Copy /etc/nginx/ssl/root_ca.crt to /etc/pki/ca-trust/source/anchors/"
+      - "  2. Run: update-ca-trust"
+      - "For Windows/Mac, import root_ca.crt into your OS trust store."
