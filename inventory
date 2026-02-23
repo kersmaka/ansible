@@ -9,3 +9,6 @@ podman.homelab.com ansible_ssh_host=192.168.0.237 ansible_user=root
 
 [podman]
 podman.homelab.com ansible_ssh_host=192.168.0.237 ansible_user=root
+
+[letsencrypt]
+ssl.homelab.com ansible_ssh_host=192.168.0.196 ansible_user=root
