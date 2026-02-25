@@ -1,6 +1,6 @@
 # --- STEP 1: BACKUP SOURCE ---
     - name: Run backup on source host
-      hosts: source_host
+      hosts: ansible.homelab.com
       tasks:
         - name: Execute AAP Backup Playbook
           ansible.builtin.command:
@@ -35,7 +35,7 @@
 
     # --- STEP 3: RESTORE ON DESTINATION ---
     - name: Restore on Destination host
-      hosts: destination_host
+      hosts: podman
       tasks:
         - name: Execute AAP Restore Playbook
           ansible.builtin.command:
