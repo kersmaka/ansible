@@ -1,47 +1,42 @@
 ---
-- name: Provision RHEL 9 KVM Virtual Machine
-  hosts: kvm_host
-  become: true
-  vars:
-    source_image: "/mnt/storage/rhel_images/rhel-9.7-x86_64-kvm.qcow2"
-    dest_image: "/home/ansible_admin/vms/qcow2/{{ vm_name }}.qcow2"
-    memory: 4000
-    vcpus: 2
-    network: "br0-network"
-
-  tasks:
-    - name: Ensure destination directory exists
-      ansible.builtin.file:
-        path: "/home/ansible_admin/vms/qcow2/"
-        state: directory
-        owner: root
-        group: root
-        mode: '0755'
-
-    - name: Check if VM already exists
-      ansible.builtin.command: virsh dominfo {{ vm_name }}
-      register: vm_check
-      ignore_errors: true
-      changed_when: false
-
-    - name: Copy qcow2 image to destination
+- name: Ensure destination directory exists
+  ansible.builtin.file:
+    path: "/home/ansible_admin/vms/qcow2/"
+    state: directory
+    mode: '0755'
+- name: Check if VM already exists
+  ansible.builtin.command: virsh dominfo {{ vm_name }}
+  register: vm_check
+  ignore_errors: true
+  changed_when: false
+- name: Copy and Configure VM (Combined for brevity)
+  block:
+    - name: Copy qcow2 image
       ansible.builtin.copy:
         src: "{{ source_image }}"
         dest: "{{ dest_image }}"
         remote_src: true
-        force: false  # Prevents overwriting an existing disk
-      when: vm_check.rc != 0
-
-    - name: Run virt-install to import the VM
+        force: false
+    - name: Inject Configuration
       ansible.builtin.command: >
-        virt-install
-        --name {{ vm_name }}
-        --ram {{ memory }}
-        --vcpus {{ vcpus }}
-        --disk path={{ dest_image }},format=qcow2
-        --import
-        --os-variant rhel9.4
-        --network network={{ network }}
-        --graphics none
-        --noautoconsole
-      when: vm_check.rc != 0
+        virt-customize -a {{ dest_image }}
+        --hostname {{ vm_name }}
+        --run-command "subscription-manager register --force --username {{ vault_rh_user }} --password '{{ vault_rh_password }}'"
+        --run-command "dnf update -y"
+    - name: Run virt-install
+      ansible.builtin.command: >
+        virt-install --name {{ vm_name }} --ram {{ vm_memory }} --vcpus {{ vm_vcpus }}
+        --disk path={{ dest_image }},format=qcow2 --import --os-variant rhel9.0
+        --network network=br0-network --graphics none --noautoconsole
+    - name: Wait for initialization
+      ansible.builtin.pause:
+        seconds: 45
+    - name: Get VM IP
+      ansible.builtin.shell: "/home/tools/ipCheck.sh {{ vm_name }}"
+      register: ip_output
+  when: vm_check.rc != 0
+- name: Share IP with subsequent plays
+  ansible.builtin.set_stats:
+    data:
+      new_vm_ip: "{{ ip_output.stdout | trim }}"
+  when: vm_check.rc != 0

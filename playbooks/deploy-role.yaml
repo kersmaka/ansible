@@ -12,12 +12,10 @@
 - hosts: "{{ target }}"
   become: true
   gather_facts: true
-
   tasks:
-
-    - name: Deploy {{primary_role}}
+    - name: "Deploy Roles"
       include_role:
-        name: "{{ item }}"
-      loop:
-        - "{{ primary_role }}"
+        name: "{{ item | trim }}"
+      loop: "{{ primary_role.split(',') }}"
+      when: primary_role is defined and primary_role != ""
 

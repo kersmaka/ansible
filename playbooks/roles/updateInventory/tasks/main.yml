@@ -1,0 +1,22 @@
+---
+# PLAY 2: Update Inventory on the Ansible Server
+- name: Update Static Inventory and Git
+  hosts: ansible.homelab.com  # Connect directly to the inventory server
+  remote_user: aap            # Use the 'aap' user directly
+  become: false               # No need for sudo if aap owns the git repo
+  tasks:
+    - name: Add new VM to inventory file
+      ansible.builtin.lineinfile:
+        path: /home/aap/github/ansible/inventory
+        insertafter: '^\[newly_provisioned_vms\]'
+        line: "{{ hostvars['kvm_host']['vm_name'] }} ansible_ssh_host={{ hostvars['kvm_host']['ip_output']['stdout'] | trim }}"
+        state: present
+      when: hostvars['kvm_host']['ip_output'] is defined
+
+    - name: Commit and push to GitHub
+      ansible.builtin.shell: |
+        cd /home/aap/github/ansible
+        git add inventory
+        git commit -m "Auto-add {{ hostvars['kvm_host']['vm_name'] }} to inventory"
+        git push
+      when: hostvars['kvm_host']['ip_output'] is defined
