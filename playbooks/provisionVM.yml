@@ -47,8 +47,8 @@
       ansible.builtin.command: >
         virt-install
         --name {{ vm_name }}
-        --ram 4000
-        --vcpus 2
+        --ram {{ vm_memory }}
+        --vcpus {{ vm_vcpus }}
         --disk path={{ dest_image }},format=qcow2
         --import
         --os-variant rhel9.0
