@@ -1,155 +1,45 @@
----
-- name: Ensure system is RHEL 9
-  assert:
-    that:
-      - ansible_distribution == "RedHat"
-      - ansible_distribution_major_version == "9"
-    fail_msg: "This playbook requires RHEL 9"
+# --- STEP 1: BACKUP SOURCE ---
+    - name: Run backup on source host
+      hosts: source_host
+      tasks:
+        - name: Execute AAP Backup Playbook
+          ansible.builtin.command:
+            cmd: "ansible-playbook -i inventory ansible.containerized_installer.backup"
+          register: backup_output
 
-# --- 1. REPOSITORY SETUP ---
-- name: Install EPEL release
-  dnf:
-    name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
-    state: present
-    disable_gpg_check: true
+        - name: Find the generated backup file
+          ansible.builtin.find:
+            paths: "{{ backup_file_path }}"
+            patterns: "automation-platform-backup-*.tar.gz"
+          register: found_backups
 
-- name: Enable CRB repository
-  command: subscription-manager repos --enable codeready-builder-for-rhel-9-x86_64-rpms
-  register: crb_out
-  changed_when: "'enabled' in crb_out.stdout"
-  failed_when: false
+        - name: Set backup filename variable
+          ansible.builtin.set_fact:
+            latest_backup: "{{ found_backups.files | sort(attribute='mtime', reverse=True) | first }}"
 
-# --- 2. THE FIREWALL FIX ---
-- name: Explicitly install firewalld packages
-  dnf:
-    name:
-      - firewalld
-      - python3-firewall
-    state: present
+    # --- STEP 2: TRANSFER ---
+    - name: Transfer backup to Destination
+      hosts: localhost
+      tasks:
+        - name: Fetch backup from source to local
+          ansible.builtin.fetch:
+            src: "{{ hostvars['source_host']['latest_backup']['path'] }}"
+            dest: "/tmp/migration_temp.tar.gz"
+            flat: yes
 
-- name: Force systemd to recognize new service files
-  systemd:
-    daemon_reload: true
+        - name: Copy backup to destination host
+          ansible.builtin.copy:
+            src: "/tmp/migration_temp.tar.gz"
+            dest: "/tmp/aap_restore_file.tar.gz"
+            delegate_to: destination_host
 
-- name: Ensure firewalld is running and enabled
-  systemd:
-    name: firewalld
-    state: started
-    enabled: true
-
-# --- 3. CONTAINER TOOLS INSTALLATION ---
-- name: Install Podman and related tools
-  dnf:
-    name:
-      - podman
-      - podman-compose
-      - podman-docker
-      - buildah
-      - skopeo
-      - slirp4netns
-      - fuse-overlayfs
-      - containernetworking-plugins
-    state: present
-
-# --- 4. SERVICE & CONFIG ---
-- name: Enable Podman socket at system level
-  systemd:
-    name: podman.socket
-    enabled: true
-    state: started
-
-- name: Configure /etc/containers/registries.conf
-  copy:
-    dest: /etc/containers/registries.conf
-    content: |
-      [registries.search]
-      registries = ['registry.access.redhat.com', 'registry.redhat.io', 'docker.io']
-
-      [registries.insecure]
-      registries = []
-
-      [registries.block]
-      registries = []
-    owner: root
-    group: root
-    mode: '0644'
-
-- name: Configure /etc/containers/storage.conf
-  copy:
-    dest: /etc/containers/storage.conf
-    content: |
-      [storage]
-      driver = "overlay"
-      runroot = "/run/containers/storage"
-      graphroot = "/var/lib/containers/storage"
-
-      [storage.options]
-      additionalimagestores = []
-
-      [storage.options.overlay]
-      mountopt = "nodev,metacopy=on"
-    owner: root
-    group: root
-    mode: '0644'
-
-# --- 5. NETWORK & SYSTEM PARAMETERS ---
-- name: Allow Podman traffic through firewalld
-  firewalld:
-    port: "{{ item }}"
-    permanent: true
-    state: enabled
-    immediate: true
-  loop:
-    - "8080/tcp"
-    - "8443/tcp"
-  loop_control:
-    loop_var: item
-
-- name: Ensure kernel modules are loaded
-  modprobe:
-    name: "{{ item }}"
-    state: present
-  loop:
-    - overlay
-    - br_netfilter
-
-- name: Persist kernel modules
-  copy:
-    dest: /etc/modules-load.d/podman.conf
-    content: |
-      overlay
-      br_netfilter
-    owner: root
-    group: root
-    mode: '0644'
-
-- name: Set sysctl parameters
-  sysctl:
-    name: "{{ item.key }}"
-    value: "{{ item.value }}"
-    state: present
-    sysctl_file: /etc/sysctl.d/99-podman.conf
-    reload: true
-  loop:
-    - { key: "net.ipv4.ip_forward", value: "1" }
-    - { key: "net.bridge.bridge-nf-call-iptables", value: "1" }
-    - { key: "net.bridge.bridge-nf-call-ip6tables", value: "1" }
-    - { key: "user.max_user_namespaces", value: "28633" }
-
-- name: Configure subuid/subgid for root user
-  lineinfile:
-    path: "/etc/{{ item }}"
-    line: "root:100000:65536"
-    create: true
-  loop:
-    - subuid
-    - subgid
-
-- name: Verify Podman installation
-  command: podman --version
-  register: podman_version
-  changed_when: false
-
-- name: Print Podman version
-  debug:
-    msg: "Podman installed: {{ podman_version.stdout }}"
+    # --- STEP 3: RESTORE ON DESTINATION ---
+    - name: Restore on Destination host
+      hosts: destination_host
+      tasks:
+        - name: Execute AAP Restore Playbook
+          ansible.builtin.command:
+            cmd: >
+              ansible-playbook -i inventory ansible.containerized_installer.restore 
+              -e "restore_backup_file=/tmp/aap_restore_file.tar.gz"
+          register: restore_output
