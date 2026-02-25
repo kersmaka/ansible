@@ -92,6 +92,9 @@
         line: "{{ vm_name }} ansible_ssh_host={{ ip_output.stdout | trim }}"
         state: present
       delegate_to: ansible.homelab.com
+      vars:
+        ansible_user: aap
+        ansible_ssh_private_key_file: /home/aap/.ssh/id_rsa
       become: false
       when:
         - vm_check.rc != 0
@@ -104,6 +107,9 @@
         git commit -m "Auto-add {{ vm_name }} ({{ ip_output.stdout | trim }}) to inventory"
         git push
       delegate_to: ansible.homelab.com
+      vars:
+        ansible_user: aap
+        ansible_ssh_private_key_file: /home/aap/.ssh/id_rsa
       become: false
       when:
         - vm_check.rc != 0
