@@ -92,10 +92,10 @@
         line: "{{ vm_name }} ansible_ssh_host={{ ip_output.stdout | trim }}"
         state: present
       delegate_to: ansible.homelab.com
-      # Remove the vars block entirely. 
-      # Since 'ssh aap@ansible' worked from your terminal, 
-      # Ansible will use that same logic automatically.
-      remote_user: aap 
+      vars:
+        ansible_user: aap
+        # Use the key we just verified with the -v command
+        ansible_ssh_private_key_file: /root/.ssh/id_rsa
       become: false
       when:
         - vm_check.rc != 0
@@ -110,6 +110,7 @@
       delegate_to: ansible.homelab.com
       vars:
         ansible_user: aap
+        ansible_ssh_private_key_file: /root/.ssh/id_rsa
       become: false
       when:
         - vm_check.rc != 0
