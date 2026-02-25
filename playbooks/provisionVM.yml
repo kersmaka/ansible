@@ -83,13 +83,24 @@
         - ip_output.stdout is defined
 
     - name: Add new VM to static inventory file
-      delegate_to: kvm_host
       ansible.builtin.lineinfile:
         path: /home/aap/github/ansible/inventory
         insertafter: '^\[newly_provisioned_vms\]'
         line: "{{ vm_name }} ansible_ssh_host={{ ip_output.stdout | trim }}"
         state: present
-      delegate_to: localhost
+      delegate_to: ansible.homelab.com
+      become: false
+      when:
+        - vm_check.rc != 0
+        - ip_output.stdout is defined
+    
+    - name: Commit and push updated inventory to GitHub
+      ansible.builtin.shell: |
+        cd /home/aap/github/ansible
+        git add inventory
+        git commit -m "Auto-add {{ vm_name }} to inventory"
+        git push
+      delegate_to: ansible.homelab.com
       become: false
       when:
         - vm_check.rc != 0
