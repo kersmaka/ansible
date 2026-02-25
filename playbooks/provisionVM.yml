@@ -2,16 +2,11 @@
 - name: Provision and Configure RHEL 9 VM
   hosts: kvm_host
   become: true
-  # This line tells Ansible to load and decrypt your vault file
   vars_files:
     - vault.yml
   vars:
-    # Use the RHEL 9.7 path you specified
     source_image: "/mnt/storage/rhel_images/rhel-9.7-x86_64-kvm.qcow2"
     dest_image: "/home/ansible_admin/vms/qcow2/{{ vm_name }}.qcow2"
-    # Note: rh_user/password vars are removed here because 
-    # you are calling vault_rh_user/password directly below.
-
   tasks:
     - name: Ensure destination directory exists
       ansible.builtin.file:
@@ -77,8 +72,16 @@
         name: "{{ vm_name }}"
         ansible_host: "{{ ip_output.stdout | trim }}"
         groups: newly_provisioned_vms
-      # FIX: Only run this task if ip_output actually has stdout data
-      when: 
+      when:
+        - vm_check.rc != 0
+        - ip_output.stdout is defined
+
+    - name: Add VM to /etc/hosts on kvm_host
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        line: "{{ ip_output.stdout | trim }}   {{ vm_name }}"
+        state: present
+      when:
         - vm_check.rc != 0
         - ip_output.stdout is defined
 
@@ -93,18 +96,6 @@
       when:
         - vm_check.rc != 0
         - ip_output.stdout is defined
-    
-    - name: Commit and push updated inventory to GitHub
-      ansible.builtin.shell: |
-        cd /home/aap/github/ansible
-        git add inventory
-        git commit -m "Auto-add {{ vm_name }} to inventory"
-        git push
-      delegate_to: ansible.homelab.com
-      become: false
-      when:
-        - vm_check.rc != 0
-        - ip_output.stdout is defined
 
     - name: Commit and push updated inventory to GitHub
       ansible.builtin.shell: |
@@ -112,8 +103,8 @@
         git add inventory
         git commit -m "Auto-add {{ vm_name }} ({{ ip_output.stdout | trim }}) to inventory"
         git push
-      delegate_to: localhost
+      delegate_to: ansible.homelab.com
       become: false
       when:
         - vm_check.rc != 0
-        - ip_output.stdout is defined        
+        - ip_output.stdout is defined
