@@ -17,13 +17,13 @@
     mode: '0600'
   become: true
 
-- name: Fix ownership of aap home directory
+- name: Fix ownership of podman config only
   ansible.builtin.file:
-    path: "/home/aap"
+    path: "/home/aap/.config/containers"
     owner: aap
     group: aap
     recurse: yes
-  become: true # Run as root to fix permissions
+  become: true # This will take seconds instead of minutes
 
 - name: Manually create podman secrets as the aap user
   ansible.builtin.shell: |
