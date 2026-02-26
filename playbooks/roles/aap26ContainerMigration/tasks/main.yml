@@ -17,33 +17,29 @@
     mode: '0600'
   become: true
 
-- name: Manually create podman secrets to bypass installer issues
+- name: Manually create podman secrets
   ansible.builtin.shell: |
-    if ! podman secret inspect {{ item.name }}; then
-      echo "{{ item.value }}" | podman secret create {{ item.name }} -
+    if ! podman secret inspect {{ sec_item.name }}; then
+      echo "{{ sec_item.value }}" | podman secret create {{ sec_item.name }} -
     fi
   loop:
     - { name: 'controller_secret_key', value: "{{ controller_secret_key }}" }
     - { name: 'controller_postgres', value: "redhat" }
     - { name: 'controller_pg_password', value: "redhat" }
+  # Use loop_control to fix the "item already in use" warning
+  loop_control:
+    loop_var: sec_item
   become: true
-  register: podman_fix
-  changed_when: "'created' in podman_fix.stdout"
-
-- name: Debug secrets file content (Temporary)
-  ansible.builtin.command: cat /home/aap/artifact/secrets.yml
-  register: secrets_contents
-  become: true
-
-- name: Show secrets content in AAP logs
-  ansible.builtin.debug:
-    var: secrets_contents.stdout  
 
 - name: Execute AAP Backup Playbook
   ansible.builtin.command:
-    cmd: ansible-playbook -i inventory ansible.containerized_installer.backup -e "@/home/aap/artifact/secrets.yml"
-    chdir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"  # <--- Add the path to where the inventory file lives
+    cmd: >
+      ansible-playbook -i inventory ansible.containerized_installer.backup 
+      -e "@/home/aap/artifact/secrets.yml"
+      -e "aap_containerized_installer_dir=/home/aap/aap"
+    chdir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
   register: backup_output
+  become: true
 
 - name: Find the generated backup file
   ansible.builtin.find:
