@@ -26,9 +26,8 @@
     - { name: 'controller_secret_key', value: "{{ controller_secret_key }}" }
     - { name: 'controller_postgres', value: "redhat" }
     - { name: 'controller_pg_password', value: "redhat" }
-  # Use loop_control to fix the "item already in use" warning
   loop_control:
-    loop_var: sec_item
+    loop_var: sec_item # Fixes the 'item' collision warning
   become: true
 
 - name: Execute AAP Backup Playbook
@@ -37,6 +36,7 @@
       ansible-playbook -i inventory ansible.containerized_installer.backup 
       -e "@/home/aap/artifact/secrets.yml"
       -e "aap_containerized_installer_dir=/home/aap/aap"
+      -e "ansible_user_dir=/home/aap"
     chdir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
   register: backup_output
   become: true
