@@ -5,7 +5,6 @@ icinga  ansible_ssh_host=192.168.0.73
 kvm_host ansible_ssh_host=192.168.0.249 ansible_port=2732 ansible_user=root
 
 [newly_provisioned_vms]
-testhost.homelab.com ansible_ssh_host=192.168.0.76
 testhost.homelab.com ansible_ssh_host=192.168.0.136
 
 podman.homelab.com ansible_ssh_host=192.168.0.225 ansible_user=root
