@@ -1,11 +1,29 @@
 # --- STEP 1: BACKUP SOURCE ---
-- name: Create temporary secrets file for backup
+# --- PRE-BACKUP SECRETS PREPARATION ---
+- name: Create the artifact directory
+  ansible.builtin.file:
+    path: "/home/aap/artifact"
+    state: directory
+    mode: '0755'
+  become: true
+
+- name: Generate secrets.yml from AAP variables
   ansible.builtin.copy:
+    # This pulls the value directly from your Job Template's extra variables
     content: |
       controller_secret_key: "{{ controller_secret_key }}"
     dest: "/home/aap/artifact/secrets.yml"
     mode: '0600'
   become: true
+
+- name: Debug secrets file content (Temporary)
+  ansible.builtin.command: cat /home/aap/artifact/secrets.yml
+  register: secrets_contents
+  become: true
+
+- name: Show secrets content in AAP logs
+  ansible.builtin.debug:
+    var: secrets_contents.stdout  
 
 - name: Execute AAP Backup Playbook
   ansible.builtin.command:
