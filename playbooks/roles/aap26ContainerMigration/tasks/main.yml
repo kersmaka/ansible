@@ -1,7 +1,15 @@
 # --- STEP 1: BACKUP SOURCE ---
+- name: Create temporary secrets file for backup
+  ansible.builtin.copy:
+    content: |
+      controller_secret_key: "{{ controller_secret_key }}"
+    dest: "/home/aap/artifact/secrets.yml"
+    mode: '0600'
+  become: true
+
 - name: Execute AAP Backup Playbook
   ansible.builtin.command:
-    cmd: "ansible-playbook -i inventory ansible.containerized_installer.backup"
+    cmd: ansible-playbook -i inventory ansible.containerized_installer.backup -e "@/home/aap/artifact/secrets.yml"
     chdir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"  # <--- Add the path to where the inventory file lives
   register: backup_output
 - name: Find the generated backup file
@@ -12,6 +20,12 @@
 - name: Set backup filename variable
   ansible.builtin.set_fact:
     latest_backup: "{{ found_backups.files | sort(attribute='mtime', reverse=True) | first }}"
+
+- name: Remove temporary secrets file
+  ansible.builtin.file:
+    path: "/home/aap/artifact/secrets.yml"
+    state: absent
+  become: true    
     
 # --- STEP 2: TRANSFER ---
 - name: Fetch backup from source to local
