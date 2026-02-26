@@ -1,12 +1,23 @@
 ---
 # PLAY 2: Update Inventory on the Ansible Server
+
+- name: Debug current directory
+  ansible.builtin.command: pwd
+  delegate_to: localhost
+  register: current_path
+
+- name: Show me the path
+  ansible.builtin.debug:
+    var: current_path.stdout
+
 - name: Add new VM to inventory file
   ansible.builtin.lineinfile:
-    path: /home/aap/github/ansible/inventory
+    # This targets the 'inventory' file in the same folder as your playbook
+    path: "{{ playbook_dir }}/inventory" 
     insertafter: '^\[newly_provisioned_vms\]'
     line: "{{ hostvars['kvm_host']['vm_name'] }} ansible_ssh_host={{ hostvars['kvm_host']['ip_output']['stdout'] | trim }}"
     state: present
-  delegate_to: localhost  # <--- This runs the task on the Ansible Server
+  delegate_to: localhost
   when: hostvars['kvm_host']['ip_output'] is defined
 
 - name: Commit and push to GitHub
