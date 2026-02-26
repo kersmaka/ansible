@@ -36,10 +36,11 @@
       ansible-playbook -i inventory ansible.containerized_installer.backup 
       -e "@/home/aap/artifact/secrets.yml"
       -e "aap_containerized_installer_dir=/home/aap/aap"
-      -e "ansible_user_dir=/home/aap"
     chdir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
   register: backup_output
+  # We use become to switch to the 'aap' user, not root
   become: true
+  become_user: aap
 
 - name: Find the generated backup file
   ansible.builtin.find:
