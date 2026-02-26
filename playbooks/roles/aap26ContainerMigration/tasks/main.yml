@@ -7,14 +7,25 @@
     mode: '0755'
   become: true
 
-- name: Generate secrets.yml from AAP variables
+- name: Generate secrets.yml
   ansible.builtin.copy:
-    # This pulls the value directly from your Job Template's extra variables
     content: |
       controller_secret_key: "{{ controller_secret_key }}"
+      # Adding these just in case the installer needs them for the DB connection
+      pg_password: "redhat" 
+      admin_password: "redhat"
     dest: "/home/aap/artifact/secrets.yml"
     mode: '0600'
   become: true
+
+- name: Manually create podman secret to bypass installer issues
+  ansible.builtin.shell: |
+    if ! podman secret inspect controller_secret_key; then
+      echo "{{ controller_secret_key }}" | podman secret create controller_secret_key -
+    fi
+  become: true
+  register: podman_fix
+  changed_when: "'created' in podman_fix.stdout"
 
 - name: Debug secrets file content (Temporary)
   ansible.builtin.command: cat /home/aap/artifact/secrets.yml
