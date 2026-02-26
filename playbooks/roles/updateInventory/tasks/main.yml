@@ -21,23 +21,22 @@
 
 - name: Commit and push to GitHub (Stateless Mode)
   ansible.builtin.shell: |
-    # 1. Setup Identity and allow the directory
+    # 1. Setup Identity
     git config --global user.email "kersmaka@gmail.com"
     git config --global user.name "AAP Runner"
     git config --global --add safe.directory /runner/project
 
-    # 2. Initialize and set remote
+    # 2. Initialize and Force Branch Name to 'main'
     cd /runner/project
-    rm -rf .git  # Ensure a clean start if a previous run left a partial .git
-    git init
+    rm -rf .git
+    git init -b main  # <--- Forces the initial branch to be 'main'
     git remote add origin https://{{ github_token }}@github.com/kersmaka/ansible.git
     
-    # 3. Align with remote without overwriting local changes
+    # 3. Sync with Remote metadata
     git fetch origin main
-    # Reset the index to the remote main branch without touching our modified inventory file
     git reset origin/main
 
-    # 4. Commit and push the specific change
+    # 4. Commit and push
     git add inventory
     git commit -m "Auto-add {{ hostvars['kvm_host']['vm_name'] }} to inventory"
     git push origin main
