@@ -57,31 +57,30 @@
 
 - name: Find the generated backup file
   ansible.builtin.find:
-    paths: "{{ backup_file_path }}"
-    patterns: "automation-platform-backup-*.tar.gz"
+    # Search both the home dir and the installer dir
+    paths: 
+      - "/home/aap"
+      - "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
+    patterns: "aap-backup-*.tar.gz"
+    recurse: yes
   register: found_backups
+  become: true
+  become_user: aap
+
 - name: Set backup filename variable
   ansible.builtin.set_fact:
-    latest_backup: "{{ found_backups.files | sort(attribute='mtime', reverse=True) | first }}"
+    latest_backup: "{{ found_backups.files | sort(attribute='mtime', reverse=true) | map(attribute='path') | first }}"
+  when: found_backups.matched > 0
 
-- name: Remove temporary secrets file
-  ansible.builtin.file:
-    path: "/home/aap/artifact/secrets.yml"
-    state: absent
-  become: true    
-    
-# --- STEP 2: TRANSFER ---
-- name: Fetch backup from source to local
+- name: Fetch the backup to AAP (localhost)
   ansible.builtin.fetch:
-    src: "{{ hostvars['source_host']['latest_backup']['path'] }}"
-    dest: "/tmp/migration_temp.tar.gz"
+    src: "{{ latest_backup }}"
+    dest: "/tmp/aap_migration_backup.tar.gz"
     flat: yes
-- name: Copy backup to destination host
-  ansible.builtin.copy:
-    src: "/tmp/migration_temp.tar.gz"
-    dest: "/tmp/aap_restore_file.tar.gz"
-    delegate_to: destination_host
-
+  become: true
+  become_user: aap
+  when: latest_backup is defined
+  
 # --- STEP 3: RESTORE ON DESTINATION ---
 - name: Execute AAP Restore Playbook
   ansible.builtin.command:
