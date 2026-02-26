@@ -2,6 +2,7 @@
 - name: Execute AAP Backup Playbook
   ansible.builtin.command:
     cmd: "ansible-playbook -i inventory ansible.containerized_installer.backup"
+    chdir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"  # <--- Add the path to where the inventory file lives
   register: backup_output
 - name: Find the generated backup file
   ansible.builtin.find:
