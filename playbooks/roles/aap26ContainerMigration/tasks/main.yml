@@ -17,8 +17,18 @@
     mode: '0600'
   become: true
 
+- name: Fix ownership of aap home directory
+  ansible.builtin.file:
+    path: "/home/aap"
+    owner: aap
+    group: aap
+    recurse: yes
+  become: true # Run as root to fix permissions
+
 - name: Manually create podman secrets as the aap user
   ansible.builtin.shell: |
+    # Force the XDG_RUNTIME_DIR so podman knows where the socket is
+    export XDG_RUNTIME_DIR=/run/user/$(id -u)
     if ! podman secret inspect {{ sec_item.name }}; then
       echo "{{ sec_item.value }}" | podman secret create {{ sec_item.name }} -
     fi
@@ -29,18 +39,21 @@
   loop_control:
     loop_var: sec_item
   become: true
-  become_user: aap  # <--- Crucial: Create secrets in the aap user's store
+  become_user: aap
 
 - name: Execute AAP Backup Playbook
-  ansible.builtin.command:
+  ansible.builtin.shell:
+    # Using shell with 'executable: /bin/bash -l' simulates a real login
     cmd: >
+      source ~/.bash_profile;
       ansible-playbook -i inventory ansible.containerized_installer.backup 
       -e "@/home/aap/artifact/secrets.yml"
       -e "aap_containerized_installer_dir=/home/aap/aap"
     chdir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
+    executable: /bin/bash
   register: backup_output
   become: true
-  become_user: aap  # <--- Crucial: Run the backup as the owner of the containers
+  become_user: aap
 
 - name: Find the generated backup file
   ansible.builtin.find:
