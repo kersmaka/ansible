@@ -12,12 +12,13 @@
 
 - name: Add new VM to inventory file
   ansible.builtin.lineinfile:
-    # Use ../ to step out of the 'playbooks' folder into the project root
     path: "{{ playbook_dir }}/../inventory"
     insertafter: '^\[newly_provisioned_vms\]'
-    line: "{{ hostvars['kvm_host']['vm_name'] }} ansible_ssh_host={{ hostvars['kvm_host']['ip_output']['stdout'] | trim }}"
+    # Use regex_search to pull only the IP address from the messy script output
+    line: "{{ hostvars['kvm_host']['vm_name'] }} ansible_ssh_host={{ hostvars['kvm_host']['ip_output']['stdout'] | regex_search('IP: (\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})', '\\1') | first }}"
     state: present
   delegate_to: localhost
+  when: hostvars['kvm_host']['ip_output'] is defined
 
 - name: Commit and push to GitHub (Stateless Mode)
   ansible.builtin.shell: |

@@ -30,7 +30,7 @@
         --network network=br0-network --graphics none --noautoconsole
     - name: Wait for initialization
       ansible.builtin.pause:
-        seconds: 45
+        seconds: 60
     - name: Get VM IP
       ansible.builtin.shell: "/home/tools/ipCheck.sh {{ vm_name }}"
       register: ip_output
