@@ -22,16 +22,17 @@
 - name: Commit and push to GitHub (Stateless Mode)
   ansible.builtin.shell: |
     # 1. Setup Identity
-    git config --global user.email "kersmaka@gmail.com
+    git config --global user.email "kersmaka@gmail.com"
     git config --global user.name "AAP Runner"
     git config --global --add safe.directory /runner/project
 
     # 2. Initialize a temporary repo in the runner
     cd /runner/project
     git init
-    git remote add origin https://{{ github_token }}@github.com/YOUR_ORG/YOUR_REPO.git
+    # Note: Ensure 'github_token' is defined in your AAP Job Template variables
+    git remote add origin https://{{ github_token }}@github.com/kersmaka/ansible.git
     
-    # 3. Pull the current state (to avoid conflicts)
+    # 3. Sync with Remote
     git fetch
     git checkout main
 
