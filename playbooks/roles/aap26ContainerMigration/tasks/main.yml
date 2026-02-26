@@ -11,18 +11,21 @@
   ansible.builtin.copy:
     content: |
       controller_secret_key: "{{ controller_secret_key }}"
-      # Adding these just in case the installer needs them for the DB connection
-      pg_password: "redhat" 
+      controller_pg_password: "redhat"
       admin_password: "redhat"
     dest: "/home/aap/artifact/secrets.yml"
     mode: '0600'
   become: true
 
-- name: Manually create podman secret to bypass installer issues
+- name: Manually create podman secrets to bypass installer issues
   ansible.builtin.shell: |
-    if ! podman secret inspect controller_secret_key; then
-      echo "{{ controller_secret_key }}" | podman secret create controller_secret_key -
+    if ! podman secret inspect {{ item.name }}; then
+      echo "{{ item.value }}" | podman secret create {{ item.name }} -
     fi
+  loop:
+    - { name: 'controller_secret_key', value: "{{ controller_secret_key }}" }
+    - { name: 'controller_postgres', value: "redhat" }
+    - { name: 'controller_pg_password', value: "redhat" }
   become: true
   register: podman_fix
   changed_when: "'created' in podman_fix.stdout"
@@ -41,7 +44,7 @@
     cmd: ansible-playbook -i inventory ansible.containerized_installer.backup -e "@/home/aap/artifact/secrets.yml"
     chdir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"  # <--- Add the path to where the inventory file lives
   register: backup_output
-  
+
 - name: Find the generated backup file
   ansible.builtin.find:
     paths: "{{ backup_file_path }}"
