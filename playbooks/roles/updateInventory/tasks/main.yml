@@ -6,11 +6,14 @@
     insertafter: '^\[newly_provisioned_vms\]'
     line: "{{ hostvars['kvm_host']['vm_name'] }} ansible_ssh_host={{ hostvars['kvm_host']['ip_output']['stdout'] | trim }}"
     state: present
+  delegate_to: localhost  # <--- This runs the task on the Ansible Server
   when: hostvars['kvm_host']['ip_output'] is defined
+
 - name: Commit and push to GitHub
   ansible.builtin.shell: |
     cd /home/aap/github/ansible
     git add inventory
     git commit -m "Auto-add {{ hostvars['kvm_host']['vm_name'] }} to inventory"
     git push
+  delegate_to: localhost  # <--- This ensures git commands run locally
   when: hostvars['kvm_host']['ip_output'] is defined
