@@ -12,13 +12,12 @@
 
 - name: Add new VM to inventory file
   ansible.builtin.lineinfile:
-    # This targets the 'inventory' file in the same folder as your playbook
-    path: "{{ playbook_dir }}/inventory" 
+    # Use ../ to step out of the 'playbooks' folder into the project root
+    path: "{{ playbook_dir }}/../inventory"
     insertafter: '^\[newly_provisioned_vms\]'
     line: "{{ hostvars['kvm_host']['vm_name'] }} ansible_ssh_host={{ hostvars['kvm_host']['ip_output']['stdout'] | trim }}"
     state: present
   delegate_to: localhost
-  when: hostvars['kvm_host']['ip_output'] is defined
 
 - name: Commit and push to GitHub
   ansible.builtin.shell: |
