@@ -17,7 +17,7 @@
     mode: '0600'
   become: true
 
-- name: Manually create podman secrets
+- name: Manually create podman secrets as the aap user
   ansible.builtin.shell: |
     if ! podman secret inspect {{ sec_item.name }}; then
       echo "{{ sec_item.value }}" | podman secret create {{ sec_item.name }} -
@@ -27,8 +27,9 @@
     - { name: 'controller_postgres', value: "redhat" }
     - { name: 'controller_pg_password', value: "redhat" }
   loop_control:
-    loop_var: sec_item # Fixes the 'item' collision warning
+    loop_var: sec_item
   become: true
+  become_user: aap  # <--- Crucial: Create secrets in the aap user's store
 
 - name: Execute AAP Backup Playbook
   ansible.builtin.command:
@@ -38,9 +39,8 @@
       -e "aap_containerized_installer_dir=/home/aap/aap"
     chdir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
   register: backup_output
-  # We use become to switch to the 'aap' user, not root
   become: true
-  become_user: aap
+  become_user: aap  # <--- Crucial: Run the backup as the owner of the containers
 
 - name: Find the generated backup file
   ansible.builtin.find:
