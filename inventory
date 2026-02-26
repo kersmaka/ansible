@@ -5,24 +5,7 @@ icinga  ansible_ssh_host=192.168.0.73
 kvm_host ansible_ssh_host=192.168.0.249 ansible_port=2732 ansible_user=root
 
 [newly_provisioned_vms]
-testhost.homelab.com ansible_ssh_host=Running nmap scan on 192.168.0.0/24... (This may take a moment)
-Scan complete.
---------------------------------------------------------
-VM: icinga.com
-  -> IP: icinga.com      MAC: 52:54:00:b7:98:d6 ((QEMU virtual NIC))
----
-VM: ssl.homelab.com
-  -> IP: ssl.homelab.com MAC: 52:54:00:ad:0a:59 ((QEMU virtual NIC))
----
-VM: ansible.homelab.com
-  -> IP: ansible.homelab.com MAC: 52:54:00:d2:b6:2e ((QEMU virtual NIC))
----
-VM: podman.homelab.com
-  -> IP: podman.homelab.com MAC: 52:54:00:6d:bb:f7 ((QEMU virtual NIC))
----
-VM: testhost.homelab.com
-  -> MAC: 52:54:00:b7:6f:a3 - IP not found on network scan (check ARP cache or power state)
----
+
 podman.homelab.com ansible_ssh_host=192.168.0.225 ansible_user=root
 
 [podman]
