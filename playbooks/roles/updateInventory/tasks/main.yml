@@ -1,23 +1,11 @@
 ---
 # PLAY 2: Update Inventory on the Ansible Server
 
-- name: Debug current directory
-  ansible.builtin.command: pwd
-  delegate_to: localhost
-  register: current_path
-  # Removed logs from source [cite: 23]
-
-- name: Show me the path
-  ansible.builtin.debug:
-    var: current_path.stdout
-  # Based on log showing path is /runner/project/playbooks 
-
 - name: Add new VM to inventory file
   ansible.builtin.lineinfile:
-    # Navigates to the project root where the inventory file resides 
     path: "{{ playbook_dir }}/../inventory"
     insertafter: '^\[newly_provisioned_vms\]'
-    # Extracts only the IP address from the nmap output provided by ipCheck.sh 
+    # Use regex_search to ensure ONLY the IP is added to the inventory
     line: "{{ hostvars['kvm_host']['vm_name'] }} ansible_ssh_host={{ hostvars['kvm_host']['ip_output']['stdout'] | regex_search('IP: (\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})', '\\1') | first }}"
     state: present
   delegate_to: localhost
@@ -30,21 +18,19 @@
     git config --global user.name "AAP Runner"
     git config --global --add safe.directory /runner/project
 
-    # 2. Initialize and Force Branch Name to 'main'
+    # 2. Re-initialize for the ephemeral AAP container
     cd /runner/project
     rm -rf .git
-    git init -b main 
-    # github_token must be defined in AAP Job Template variables to avoid authentication failure 
+    git init -b main
     git remote add origin https://{{ github_token }}@github.com/kersmaka/ansible.git
     
-    # 3. Sync with Remote metadata to resolve checkout conflicts [cite: 17, 19]
+    # 3. Sync and reset to match remote state
     git fetch origin main
     git reset origin/main
 
-    # 4. Commit and push
+    # 4. Final Commit and Push
     git add inventory
     git commit -m "Auto-add {{ hostvars['kvm_host']['vm_name'] }} to inventory"
     git push origin main
   delegate_to: localhost
   when: hostvars['kvm_host']['ip_output'] is defined
-  # Recommended to add no_log: true here to hide the github_token in AAP logs
