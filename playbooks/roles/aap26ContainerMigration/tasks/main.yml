@@ -1,45 +1,33 @@
 # --- STEP 1: BACKUP SOURCE ---
-    - name: Run backup on source host
-      hosts: ansible.homelab.com
-      tasks:
-        - name: Execute AAP Backup Playbook
-          ansible.builtin.command:
-            cmd: "ansible-playbook -i inventory ansible.containerized_installer.backup"
-          register: backup_output
+- name: Execute AAP Backup Playbook
+  ansible.builtin.command:
+    cmd: "ansible-playbook -i inventory ansible.containerized_installer.backup"
+  register: backup_output
+- name: Find the generated backup file
+  ansible.builtin.find:
+    paths: "{{ backup_file_path }}"
+    patterns: "automation-platform-backup-*.tar.gz"
+  register: found_backups
+- name: Set backup filename variable
+  ansible.builtin.set_fact:
+    latest_backup: "{{ found_backups.files | sort(attribute='mtime', reverse=True) | first }}"
+    
+# --- STEP 2: TRANSFER ---
+- name: Fetch backup from source to local
+  ansible.builtin.fetch:
+    src: "{{ hostvars['source_host']['latest_backup']['path'] }}"
+    dest: "/tmp/migration_temp.tar.gz"
+    flat: yes
+- name: Copy backup to destination host
+  ansible.builtin.copy:
+    src: "/tmp/migration_temp.tar.gz"
+    dest: "/tmp/aap_restore_file.tar.gz"
+    delegate_to: destination_host
 
-        - name: Find the generated backup file
-          ansible.builtin.find:
-            paths: "{{ backup_file_path }}"
-            patterns: "automation-platform-backup-*.tar.gz"
-          register: found_backups
-
-        - name: Set backup filename variable
-          ansible.builtin.set_fact:
-            latest_backup: "{{ found_backups.files | sort(attribute='mtime', reverse=True) | first }}"
-
-    # --- STEP 2: TRANSFER ---
-    - name: Transfer backup to Destination
-      hosts: localhost
-      tasks:
-        - name: Fetch backup from source to local
-          ansible.builtin.fetch:
-            src: "{{ hostvars['source_host']['latest_backup']['path'] }}"
-            dest: "/tmp/migration_temp.tar.gz"
-            flat: yes
-
-        - name: Copy backup to destination host
-          ansible.builtin.copy:
-            src: "/tmp/migration_temp.tar.gz"
-            dest: "/tmp/aap_restore_file.tar.gz"
-            delegate_to: destination_host
-
-    # --- STEP 3: RESTORE ON DESTINATION ---
-    - name: Restore on Destination host
-      hosts: podman
-      tasks:
-        - name: Execute AAP Restore Playbook
-          ansible.builtin.command:
-            cmd: >
-              ansible-playbook -i inventory ansible.containerized_installer.restore 
-              -e "restore_backup_file=/tmp/aap_restore_file.tar.gz"
-          register: restore_output
+# --- STEP 3: RESTORE ON DESTINATION ---
+- name: Execute AAP Restore Playbook
+  ansible.builtin.command:
+    cmd: >
+      ansible-playbook -i inventory ansible.containerized_installer.restore 
+      -e "restore_backup_file=/tmp/aap_restore_file.tar.gz"
+  register: restore_output
