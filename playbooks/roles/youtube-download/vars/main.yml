@@ -1,4 +1,4 @@
 ---
 # vars file for buildPodman
+venv_path: "/opt/yt-dlp-venv"
 download_path: "/home/{{ ansible_user }}/downloads/music"
-playlist_url: "https://youtube.com/playlist?list=PLgtJkU4lApjYiFlT8eYGOGI3F-tB2DP6-&si=1f0ewG2j61Vmxlo2"

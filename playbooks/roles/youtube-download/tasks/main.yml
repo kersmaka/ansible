@@ -1,5 +1,8 @@
----
-- name: Update apt cache and install system dependencies
+- name: Ensure a playlist URL was provided
+  fail:
+    msg: "Please provide a playlist URL using '-e playlist_url=...'"
+  when: playlist_url is not defined
+- name: Install system dependencies
   apt:
     name:
       - python3-pip
@@ -7,9 +10,11 @@
       - ffmpeg
     state: present
     update_cache: yes
-- name: Install yt-dlp using pip
+- name: Install yt-dlp into a Virtual Environment
   pip:
     name: yt-dlp
+    virtualenv: "{{ venv_path }}"
+    virtualenv_command: python3 -m venv
     state: latest
 - name: Create download directory
   file:
@@ -17,9 +22,10 @@
     state: directory
     mode: '0755'
     owner: "{{ ansible_user }}"
-- name: Execute yt-dlp download command
+  become: false
+- name: Execute yt-dlp from the Virtual Environment
   command: >
-    yt-dlp 
+    {{ venv_path }}/bin/yt-dlp 
     -x 
     --audio-format mp3 
     --audio-quality 0 
@@ -29,4 +35,4 @@
     "{{ playlist_url }}"
   register: ytdlp_output
   changed_when: "'has already been downloaded' not in ytdlp_output.stdout"
-  become: false  # Run as the user, not root, so files have correct permissions
+  become: false
