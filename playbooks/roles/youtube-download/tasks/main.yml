@@ -1,0 +1,32 @@
+---
+- name: Update apt cache and install system dependencies
+  apt:
+    name:
+      - python3-pip
+      - python3-venv
+      - ffmpeg
+    state: present
+    update_cache: yes
+- name: Install yt-dlp using pip
+  pip:
+    name: yt-dlp
+    state: latest
+- name: Create download directory
+  file:
+    path: "{{ download_path }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ ansible_user }}"
+- name: Execute yt-dlp download command
+  command: >
+    yt-dlp 
+    -x 
+    --audio-format mp3 
+    --audio-quality 0 
+    --embed-thumbnail 
+    --add-metadata 
+    -o "{{ download_path }}/%(playlist)s/%(playlist_index)s - %(title)s.%(ext)s" 
+    "{{ playlist_url }}"
+  register: ytdlp_output
+  changed_when: "'has already been downloaded' not in ytdlp_output.stdout"
+  become: false  # Run as the user, not root, so files have correct permissions
