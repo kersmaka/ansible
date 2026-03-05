@@ -7,6 +7,13 @@
         cmd: ansible-playbook -i inventory ansible.containerized_installer.backup
         chdir: "{{ installer_path }}"
       register: backup_run
+      ignore_errors: yes  # Allows us to see the output even on failure
+
+    - name: Debug backup failure
+      ansible.builtin.debug:
+        msg: "{{ backup_run.stdout_lines }}"
+      when: backup_run.rc != 0
+      
     - name: Compress backup directory
       ansible.builtin.shell:
         cmd: "tar -cvzf {{ backup_archive }} backups/"
