@@ -34,15 +34,7 @@
     cmd: "loginctl enable-linger aap"
     creates: "/var/lib/systemd/linger/aap"
 
-- name: Fix remote_tmp permissions for aap user
-  ansible.builtin.file:
-    path: /home/aap/.ansible/tmp
-    state: directory
-    mode: '0755'
-    owner: aap
-    group: aap
-
-# 2. Networking Fixes (Port Binding and Firewall)
+# 2. Networking Fixes (Crucial for Port 443)
 - name: Allow aap user to bind to privileged ports (80/443)
   ansible.posix.sysctl:
     name: net.ipv4.ip_unprivileged_port_start
@@ -51,20 +43,16 @@
     state: present
     reload: yes
 
-
-
 - name: Open HTTP and HTTPS ports in firewalld
   ansible.posix.firewalld:
     service: "{{ item }}"
     permanent: yes
     state: enabled
     immediate: yes
-  loop:
-    - http
-    - https
+  loop: [http, https]
 
-# 3. SSH Trust (Using slurp to avoid 'file not found' lookup error)
-- name: Slurp the aap user's public key from Target
+# 3. SSH Trust & Environment Prep
+- name: Slurp the aap user's public key
   ansible.builtin.slurp:
     src: /home/aap/.ssh/id_rsa.pub
   register: aap_pub_key
@@ -77,15 +65,6 @@
   delegate_to: 192.168.0.249
   vars:
     ansible_port: 2732
-
-# 4. File Transfers & Permissions
-- name: Create setup directory
-  ansible.builtin.file:
-    path: /home/aap/setup
-    state: directory
-    owner: aap
-    group: aap
-    mode: '0755'
 
 - name: Pull AAP bundle and Inventory via SCP
   ansible.builtin.shell:
@@ -105,28 +84,26 @@
     owner: aap
     group: aap
 
-- name: Copy inventory into extracted bundle folder
-  ansible.builtin.copy:
-    src: /home/aap/setup/inventory
-    dest: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/inventory
-    remote_src: yes
-    owner: aap
-    group: aap
-    mode: '0644'
-
-- name: Ensure aap user owns the entire bundle directory (Fixes Permission Denied)
+- name: Ensure aap user owns the bundle directory
   ansible.builtin.file:
     path: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64
     state: directory
     recurse: yes
     owner: aap
     group: aap
-    mode: '0755'
+
+# 4. Cleanup failed state (Forcing fresh port binding)
+- name: Stop any existing failed AAP containers
+  ansible.builtin.shell:
+    cmd: "podman stop --all && podman rm --all"
+  become: yes
+  become_user: aap
+  ignore_errors: yes
 
 # 5. Final Installation
 - name: Execute Containerized Installer
   ansible.builtin.command:
-    cmd: "ansible-playbook -i inventory ansible.containerized_installer.install"
+    cmd: "ansible-playbook -i /home/aap/setup/inventory ansible.containerized_installer.install"
     chdir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/"
   become: yes
   become_user: aap
