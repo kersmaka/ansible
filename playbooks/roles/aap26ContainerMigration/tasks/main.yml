@@ -1,82 +1,18 @@
-# --- STEP 1: BACKUP SOURCE ---
-# --- PRE-BACKUP SECRETS PREPARATION ---
-- name: Create the artifact directory
-  ansible.builtin.file:
-    path: "/home/aap/artifact"
-    state: directory
-    mode: '0755'
-  become: true
 
-- name: Generate secrets.yml
-  ansible.builtin.copy:
-    content: |
-      controller_secret_key: "{{ controller_secret_key }}"
-      controller_pg_password: "redhat"
-      admin_password: "redhat"
-    dest: "/home/aap/artifact/secrets.yml"
-    mode: '0600'
-  become: true
-
-- name: Fix ownership of podman config only
-  ansible.builtin.file:
-    path: "/home/aap/.config/containers"
-    owner: aap
-    group: aap
-    recurse: yes
-  become: true # This will take seconds instead of minutes
-
-- name: Manually create podman secrets as the aap user
-  ansible.builtin.shell: |
-    # Force the XDG_RUNTIME_DIR so podman knows where the socket is
-    export XDG_RUNTIME_DIR=/run/user/$(id -u)
-    if ! podman secret inspect {{ sec_item.name }}; then
-      echo "{{ sec_item.value }}" | podman secret create {{ sec_item.name }} -
-    fi
-  loop:
-    - { name: 'controller_secret_key', value: "{{ controller_secret_key }}" }
-    - { name: 'controller_postgres', value: "redhat" }
-    - { name: 'controller_pg_password', value: "redhat" }
-  loop_control:
-    loop_var: sec_item
-  become: true
-  become_user: aap
-
-- name: Execute AAP Backup Playbook
-  ansible.builtin.shell:
-    # Using shell with 'executable: /bin/bash -l' simulates a real login
-    cmd: >
-      source ~/.bash_profile;
-      ansible-playbook -i inventory ansible.containerized_installer.backup 
-      -e "@/home/aap/artifact/secrets.yml"
-      -e "aap_containerized_installer_dir=/home/aap/aap"
-    chdir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
-    executable: /bin/bash
-  register: backup_output
-  become: true
-  become_user: aap
-
-- name: Find the generated backup file
-  ansible.builtin.find:
-    paths: 
-      - "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
-    patterns: "aap-backup-*.tar.gz"
-    recurse: yes
-  register: found_backups
-  become: true
-  become_user: aap
-
-- name: Set backup filename variable
-  ansible.builtin.set_fact:
-    latest_backup: "{{ found_backups.files | sort(attribute='mtime', reverse=true) | map(attribute='path') | first }}"
-  when: found_backups.matched > 0
-
-- name: Execute AAP Restore Playbook
-  ansible.builtin.command:
-    cmd: >
-      ansible-playbook -i inventory ansible.containerized_installer.restore 
-      -e "restore_backup_file={{ latest_backup }}"
-    chdir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64"
-  register: restore_output
-  become: true
-  become_user: aap
-  when: latest_backup is defined
+- name: Generate AAP Backup on Source
+  when: "'source' in group_names"
+  block:
+    - name: Run AAP Backup Playbook
+      ansible.builtin.command:
+        cmd: ansible-playbook -i inventory ansible.containerized_installer.backup
+        chdir: "{{ installer_path }}"
+      register: backup_run
+    - name: Compress backup directory
+      ansible.builtin.shell:
+        cmd: "tar -cvzf {{ backup_archive }} backups/"
+        chdir: "{{ installer_path }}"
+    - name: Fetch backup to local controller
+      ansible.builtin.fetch:
+        src: "{{ installer_path }}/{{ backup_archive }}"
+        dest: "{{ local_tmp_path }}/"
+        flat: yes
