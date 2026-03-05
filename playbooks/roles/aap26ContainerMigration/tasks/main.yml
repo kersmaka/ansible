@@ -13,13 +13,8 @@
       ansible.builtin.debug:
         msg: "{{ backup_run.stdout_lines }}"
       when: backup_run.rc != 0
-      
+
     - name: Compress backup directory
       ansible.builtin.shell:
         cmd: "tar -cvzf {{ backup_archive }} backups/"
         chdir: "{{ installer_path }}"
-    - name: Fetch backup to local controller
-      ansible.builtin.fetch:
-        src: "{{ installer_path }}/{{ backup_archive }}"
-        dest: "{{ local_tmp_path }}/"
-        flat: yes
