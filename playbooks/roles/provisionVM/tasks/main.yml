@@ -16,18 +16,25 @@
     - name: Copy qcow2 image
       ansible.builtin.copy:
         src: "{{ source_image }}"
-        dest: "{{ dest_image }}"
+        dest: "{{ dest_image }}.orig"  # Copy to a temporary source file
         remote_src: true
         force: false
 
-    - name: Resize the qcow2 image file to 40G
-      ansible.builtin.command: "qemu-img resize {{ dest_image }} 40G"
+    - name: Create empty 30G target disk
+      ansible.builtin.command: "qemu-img create -f qcow2 {{ dest_image }} 30G"
 
-    - name: Inject Configuration and Expand FS
+    - name: Resize partitions to fill 30G
+      ansible.builtin.command: "virt-resize --expand /dev/vda4 {{ dest_image }}.orig {{ dest_image }}"
+
+    - name: Cleanup temporary image
+      ansible.builtin.file:
+        path: "{{ dest_image }}.orig"
+        state: absent
+
+    - name: Inject Configuration (Hostname, Subscription, Updates)
       ansible.builtin.command: >
         virt-customize -a {{ dest_image }}
         --hostname {{ vm_name }}
-        --expand /dev/vda4
         --run-command "subscription-manager register --force --username {{ vault_rh_user }} --password '{{ vault_rh_password }}'"
         --run-command "dnf update -y"
 
