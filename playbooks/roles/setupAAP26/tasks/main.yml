@@ -15,7 +15,6 @@
   register: aap_uid
   changed_when: false
 
-# FIX: Enable lingering so the user bus stays active for rootless podman
 - name: Enable lingering for aap user
   ansible.builtin.command:
     cmd: "loginctl enable-linger aap"
@@ -27,11 +26,31 @@
     dest: /etc/sudoers.d/aap
     mode: '0440'
 
+# 2. Networking & Firewall Fixes (Resolves Connection Refused)
+- name: Open HTTP and HTTPS ports in firewalld
+  ansible.posix.firewalld:
+    service: "{{ item }}"
+    permanent: yes
+    state: enabled
+    immediate: yes
+  loop:
+    - http
+    - https
+
+- name: Allow aap user to bind to privileged ports (80/443)
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_unprivileged_port_start
+    value: '80'
+    sysctl_set: yes
+    state: present
+    reload: yes
+
 - name: Install ansible-core on RHEL 9.7
   ansible.builtin.dnf:
     name: ansible-core
     state: present
 
+# 3. File Transfers & Extraction
 - name: Create setup directory
   ansible.builtin.file:
     path: /home/aap/setup
@@ -40,7 +59,6 @@
     group: aap
     mode: '0755'
 
-# 2. Automated SSH Trust 
 - name: Slurp the aap user's public key
   ansible.builtin.slurp:
     src: /home/aap/.ssh/id_rsa.pub
@@ -55,7 +73,6 @@
   vars:
     ansible_port: 2732
 
-# 3. File Transfers
 - name: Pull AAP bundle from homelab via SCP
   ansible.builtin.shell:
     cmd: "scp -P 2732 -o StrictHostKeyChecking=no root@192.168.0.249:/mnt/storage/ansible/aapVersions/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64.tar.gz /home/aap/setup/aap_bundle.tar.gz"
@@ -85,7 +102,6 @@
   become: yes
   become_user: aap
   environment:
-    # Explicitly point to the user's runtime directory for the bus connection
     XDG_RUNTIME_DIR: "/run/user/{{ aap_uid.stdout }}"
   async: 3600 
   poll: 60
