@@ -61,13 +61,11 @@
     owner: aap
     group: aap
 
-- name: Copy inventory from AAP Project to target directory
-  ansible.builtin.copy:
-    src: inventory
-    dest: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/inventory
-    owner: aap
-    group: aap
-    mode: '0644'
+- name: Pull inventory from homelab via SCP
+  ansible.builtin.shell:
+    cmd: "scp -P 2732 -o StrictHostKeyChecking=no root@192.168.0.249:/home/ansible/ansibleInventory/inventory /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/inventory"
+  become: yes
+  become_user: aap
 
 # 5. Final AAP 2.6 Installation
 - name: Execute Containerized Installer
