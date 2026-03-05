@@ -1,19 +1,22 @@
 ---
-# 1. Prepare the Target Environment
+# 1. User & OS Preparation
 - name: Create the aap user
   ansible.builtin.user:
     name: aap
     password: "{{ 'redhat' | password_hash('sha512') }}"
     groups: wheel
+    generate_ssh_key: yes
+    ssh_key_bits: 4096
+    ssh_key_file: .ssh/id_rsa
     state: present
 
-- name: Grant sudo access to aap user
+- name: Grant passwordless sudo to aap user
   ansible.builtin.copy:
     content: "aap ALL=(ALL) NOPASSWD:ALL"
     dest: /etc/sudoers.d/aap
     mode: '0440'
 
-- name: Install ansible-core
+- name: Install ansible-core on RHEL 9.7
   ansible.builtin.dnf:
     name: ansible-core
     state: present
@@ -26,8 +29,22 @@
     group: aap
     mode: '0755'
 
-# 2. Option 1: The Remote Pull (Host-to-Host)
-# This bypasses the AAP Controller's lack of local storage access
+# 2. Automated SSH Trust (Bypassing prohibit-password)
+- name: Slurp the aap user's public key
+  ansible.builtin.slurp:
+    src: /home/aap/.ssh/id_rsa.pub
+  register: aap_pub_key
+
+- name: Inject aap public key into Debian root authorized_keys
+  ansible.posix.authorized_key:
+    user: root
+    state: present
+    key: "{{ aap_pub_key['content'] | b64decode }}"
+  delegate_to: 192.168.0.249
+  vars:
+    ansible_port: 2732
+
+# 3. Secure & Automated File Transfer
 - name: Pull AAP bundle from homelab via SCP
   ansible.builtin.shell:
     cmd: "scp -P 2732 -o StrictHostKeyChecking=no root@192.168.0.249:/mnt/storage/ansible/aapVersions/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64.tar.gz /home/aap/setup/aap_bundle.tar.gz"
@@ -35,8 +52,8 @@
   become: yes
   become_user: aap
 
-# 3. Extraction & Inventory Setup
-- name: Extract AAP bundle
+# 4. Extraction & Configuration
+- name: Extract AAP bundle to /home/aap/
   ansible.builtin.unarchive:
     src: /home/aap/setup/aap_bundle.tar.gz
     dest: /home/aap/
@@ -44,18 +61,21 @@
     owner: aap
     group: aap
 
-- name: Copy inventory from Project to Target
+- name: Copy inventory from AAP Project to target directory
   ansible.builtin.copy:
-    # This 'src' looks inside your AAP Project (Git repo)
-    src: inventory 
+    src: inventory
     dest: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/inventory
     owner: aap
     group: aap
+    mode: '0644'
 
-# 4. Installation
-- name: Run AAP Installer
+# 5. Final AAP 2.6 Installation
+- name: Execute Containerized Installer
   ansible.builtin.command:
     cmd: "ansible-playbook -i inventory ansible.containerized_installer.install"
     chdir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/"
   become: yes
   become_user: aap
+  # Note: Installer can take 10-20 minutes
+  async: 1800 
+  poll: 30
