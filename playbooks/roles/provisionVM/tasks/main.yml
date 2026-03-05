@@ -21,7 +21,7 @@
         force: false
 
     - name: Resize the qcow2 image file to 30G
-      ansible.builtin.command: "qemu-img resize {{ dest_image }} 30G"
+      ansible.builtin.command: "qemu-img resize {{ dest_image }} 40G"
 
     - name: Inject Configuration and Expand FS
       ansible.builtin.command: >
