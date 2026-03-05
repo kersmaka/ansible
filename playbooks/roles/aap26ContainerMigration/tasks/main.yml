@@ -6,8 +6,12 @@
       ansible.builtin.command:
         cmd: ansible-playbook -i inventory ansible.containerized_installer.backup
         chdir: "{{ installer_path }}"
+      # We switch from root to the aap user here
+      become: yes
+      become_user: aap
+      environment:
+        HOME: "/home/aap"
       register: backup_run
-      ignore_errors: yes  # Allows us to see the output even on failure
 
     - name: Debug backup failure
       ansible.builtin.debug:
