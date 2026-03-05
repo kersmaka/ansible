@@ -20,17 +20,16 @@
         remote_src: true
         force: false
 
-    - name: Resize the qcow2 image file to 30G
+    - name: Resize the qcow2 image file to 40G
       ansible.builtin.command: "qemu-img resize {{ dest_image }} 40G"
 
     - name: Inject Configuration and Expand FS
       ansible.builtin.command: >
         virt-customize -a {{ dest_image }}
         --hostname {{ vm_name }}
+        --expand /dev/vda4
         --run-command "subscription-manager register --force --username {{ vault_rh_user }} --password '{{ vault_rh_password }}'"
         --run-command "dnf update -y"
-        --run-command "growpart /dev/vda 4"
-        --run-command "xfs_growfs /"
 
     - name: Run virt-install
       ansible.builtin.command: >
