@@ -32,7 +32,7 @@
     cmd: "loginctl enable-linger aap"
     creates: "/var/lib/systemd/linger/aap"
 
-# 2. Networking Fixes (Port Binding and Firewall)
+# 2. Networking Fixes (Crucial for 443 Binding)
 - name: Allow aap user to bind to privileged ports (80/443)
   ansible.posix.sysctl:
     name: net.ipv4.ip_unprivileged_port_start
@@ -49,10 +49,17 @@
     immediate: yes
   loop: [http, https]
 
-# 3. Deep Cleanup (Crucial for stubborn connection issues)
-- name: Hard reset Podman environment for aap user
+# 3. Robust Cleanup (Fixes the "container is running" error)
+- name: Force stop all existing containers
   ansible.builtin.shell:
-    cmd: "podman kill --all; podman rm --all; podman system prune -f; podman volume rm --all"
+    cmd: "podman stop --all"
+  become: yes
+  become_user: aap
+  ignore_errors: yes
+
+- name: Force remove all existing containers
+  ansible.builtin.shell:
+    cmd: "podman rm --all --force"
   become: yes
   become_user: aap
   ignore_errors: yes
@@ -68,7 +75,7 @@
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ aap_uid.stdout }}"
 
-# 4. SSH Trust & Extraction
+# 4. SSH Trust & Extractions
 - name: Slurp the aap user's public key
   ansible.builtin.slurp:
     src: /home/aap/.ssh/id_rsa.pub
@@ -91,7 +98,7 @@
     owner: aap
     group: aap
 
-# 5. Final Installation Execution
+# 5. Final Installation
 - name: Execute Containerized Installer
   ansible.builtin.command:
     cmd: "ansible-playbook -i /home/aap/setup/inventory ansible.containerized_installer.install"
@@ -101,5 +108,5 @@
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ aap_uid.stdout }}"
     DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ aap_uid.stdout }}/bus"
-  async: 5400 # Increased to 1.5 hours just in case
+  async: 3600 
   poll: 60
