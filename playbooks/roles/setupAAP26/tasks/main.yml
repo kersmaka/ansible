@@ -30,7 +30,7 @@
 # This bypasses the AAP Controller's lack of local storage access
 - name: Pull AAP bundle from homelab via SCP
   ansible.builtin.shell:
-    cmd: "scp -o StrictHostKeyChecking=no root@192.168.0.249:/mnt/storage/ansible/aapVersions/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64.tar.gz /home/aap/setup/aap_bundle.tar.gz"
+    cmd: "scp -P 2732 -o StrictHostKeyChecking=no root@192.168.0.249:/mnt/storage/ansible/aapVersions/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64.tar.gz /home/aap/setup/aap_bundle.tar.gz"
     creates: /home/aap/setup/aap_bundle.tar.gz
   become: yes
   become_user: aap
