@@ -49,7 +49,26 @@
     immediate: yes
   loop: [http, https]
 
-# 3. SSH Trust & Environment Prep
+# 3. Deep Cleanup (Crucial for stubborn connection issues)
+- name: Hard reset Podman environment for aap user
+  ansible.builtin.shell:
+    cmd: "podman kill --all; podman rm --all; podman system prune -f; podman volume rm --all"
+  become: yes
+  become_user: aap
+  ignore_errors: yes
+
+- name: Start Podman user socket
+  ansible.builtin.systemd:
+    name: podman.socket
+    scope: user
+    state: started
+    enabled: yes
+  become: yes
+  become_user: aap
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ aap_uid.stdout }}"
+
+# 4. SSH Trust & Extraction
 - name: Slurp the aap user's public key
   ansible.builtin.slurp:
     src: /home/aap/.ssh/id_rsa.pub
@@ -64,24 +83,6 @@
   vars:
     ansible_port: 2732
 
-# 4. Cleanup & Pre-Flight for Rootless Podman
-- name: Stop and remove any existing failed AAP containers
-  ansible.builtin.shell:
-    cmd: "podman stop --all && podman rm --all"
-  become: yes
-  become_user: aap
-  ignore_errors: yes
-
-- name: Ensure the user systemd bus is reachable
-  ansible.builtin.systemd:
-    scope: user
-    daemon_reload: yes
-  become: yes
-  become_user: aap
-  environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ aap_uid.stdout }}"
-
-# 5. Extract and Install
 - name: Extract AAP bundle
   ansible.builtin.unarchive:
     src: /home/aap/setup/aap_bundle.tar.gz
@@ -90,14 +91,7 @@
     owner: aap
     group: aap
 
-- name: Ensure aap user owns the bundle directory
-  ansible.builtin.file:
-    path: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64
-    state: directory
-    recurse: yes
-    owner: aap
-    group: aap
-
+# 5. Final Installation Execution
 - name: Execute Containerized Installer
   ansible.builtin.command:
     cmd: "ansible-playbook -i /home/aap/setup/inventory ansible.containerized_installer.install"
@@ -107,5 +101,5 @@
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ aap_uid.stdout }}"
     DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ aap_uid.stdout }}/bus"
-  async: 3600 
+  async: 5400 # Increased to 1.5 hours just in case
   poll: 60
