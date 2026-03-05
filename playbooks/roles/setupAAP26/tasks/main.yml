@@ -1,5 +1,5 @@
 ---
-# 1. User & OS Preparation (Already completed in your last run)
+# 1. User & OS Preparation
 - name: Create the aap user
   ansible.builtin.user:
     name: aap
@@ -9,6 +9,17 @@
     ssh_key_bits: 4096
     ssh_key_file: .ssh/id_rsa
     state: present
+
+- name: Get aap UID
+  ansible.builtin.command: id -u aap
+  register: aap_uid
+  changed_when: false
+
+# FIX: Enable lingering so the user bus stays active for rootless podman
+- name: Enable lingering for aap user
+  ansible.builtin.command:
+    cmd: "loginctl enable-linger aap"
+    creates: "/var/lib/systemd/linger/aap"
 
 - name: Grant passwordless sudo to aap user
   ansible.builtin.copy:
@@ -44,7 +55,7 @@
   vars:
     ansible_port: 2732
 
-# 3. File Transfers (Bundle and Inventory)
+# 3. File Transfers
 - name: Pull AAP bundle from homelab via SCP
   ansible.builtin.shell:
     cmd: "scp -P 2732 -o StrictHostKeyChecking=no root@192.168.0.249:/mnt/storage/ansible/aapVersions/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64.tar.gz /home/aap/setup/aap_bundle.tar.gz"
@@ -73,5 +84,8 @@
     chdir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/"
   become: yes
   become_user: aap
+  environment:
+    # Explicitly point to the user's runtime directory for the bus connection
+    XDG_RUNTIME_DIR: "/run/user/{{ aap_uid.stdout }}"
   async: 3600 
   poll: 60
