@@ -1,6 +1,6 @@
 ---
-# 1. System Requirements & User Setup
-- name: Install system dependencies for rootless podman and firewall
+# 1. User & OS Preparation
+- name: Install system dependencies (Ansible & Firewall)
   ansible.builtin.dnf:
     name:
       - ansible-core
@@ -13,15 +13,38 @@
     password: "{{ 'redhat' | password_hash('sha512') }}"
     groups: wheel
     generate_ssh_key: yes
+    ssh_key_bits: 4096
+    ssh_key_file: .ssh/id_rsa
     state: present
 
-- name: Enable lingering for aap user
+- name: Get aap UID
+  ansible.builtin.command: id -u aap
+  register: aap_uid
+  changed_when: false
+
+- name: Enable lingering for aap user (Required for rootless bus)
   ansible.builtin.command:
     cmd: "loginctl enable-linger aap"
     creates: "/var/lib/systemd/linger/aap"
 
-# 2. Networking Permissions (CRITICAL for Port 443)
-- name: Allow aap user to bind to privileged ports
+- name: Grant passwordless sudo to aap user
+  ansible.builtin.copy:
+    content: "aap ALL=(ALL) NOPASSWD:ALL"
+    dest: /etc/sudoers.d/aap
+    mode: '0440'
+
+# 2. Networking & Firewall (Resolves Connection Refused on 443)
+- name: Open HTTP and HTTPS ports in firewalld
+  ansible.posix.firewalld:
+    service: "{{ item }}"
+    permanent: yes
+    state: enabled
+    immediate: yes
+  loop:
+    - http
+    - https
+
+- name: Allow aap user to bind to privileged ports (80/443)
   ansible.posix.sysctl:
     name: net.ipv4.ip_unprivileged_port_start
     value: '80'
@@ -29,18 +52,51 @@
     state: present
     reload: yes
 
-- name: Open firewall for AAP
-  ansible.posix.firewalld:
-    service: "{{ item }}"
-    permanent: yes
-    state: enabled
-    immediate: yes
-  loop: [http, https]
+# 3. Automated SSH Trust & File Transfers
+- name: Slurp the aap user's public key
+  ansible.builtin.slurp:
+    src: /home/aap/.ssh/id_rsa.pub
+  register: aap_pub_key
 
-# 3. File Management (Already completed in your manual run)
-# ... [Keep your previous SCP and Extract tasks here] ...
+- name: Inject aap public key into Debian root authorized_keys
+  ansible.posix.authorized_key:
+    user: root
+    state: present
+    key: "{{ aap_pub_key['content'] | b64decode }}"
+  delegate_to: 192.168.0.249
+  vars:
+    ansible_port: 2732
 
-# 4. Execute Installer
+- name: Create setup directory
+  ansible.builtin.file:
+    path: /home/aap/setup
+    state: directory
+    owner: aap
+    group: aap
+    mode: '0755'
+
+- name: Pull AAP bundle from homelab via SCP
+  ansible.builtin.shell:
+    cmd: "scp -P 2732 -o StrictHostKeyChecking=no root@192.168.0.249:/mnt/storage/ansible/aapVersions/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64.tar.gz /home/aap/setup/aap_bundle.tar.gz"
+    creates: /home/aap/setup/aap_bundle.tar.gz
+  become: yes
+  become_user: aap
+
+- name: Extract AAP bundle
+  ansible.builtin.unarchive:
+    src: /home/aap/setup/aap_bundle.tar.gz
+    dest: /home/aap/
+    remote_src: yes
+    owner: aap
+    group: aap
+
+- name: Pull inventory from homelab via SCP
+  ansible.builtin.shell:
+    cmd: "scp -P 2732 -o StrictHostKeyChecking=no root@192.168.0.249:/home/ansible/ansibleInventory/inventory /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/inventory"
+  become: yes
+  become_user: aap
+
+# 4. Final AAP 2.6 Installation
 - name: Execute Containerized Installer
   ansible.builtin.command:
     cmd: "ansible-playbook -i inventory ansible.containerized_installer.install"
@@ -48,6 +104,6 @@
   become: yes
   become_user: aap
   environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ ansible_user_uid }}" # Collected via setup/facts
+    XDG_RUNTIME_DIR: "/run/user/{{ aap_uid.stdout }}"
   async: 3600 
   poll: 60
