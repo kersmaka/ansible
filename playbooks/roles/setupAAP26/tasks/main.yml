@@ -91,6 +91,16 @@
   vars:
     ansible_port: 2732
 
+- name: Pull AAP bundle and Inventory via SCP
+  ansible.builtin.shell:
+    cmd: "scp -P 2732 -o StrictHostKeyChecking=no root@192.168.0.249:{{ item.src }} {{ item.dest }}"
+    creates: "{{ item.dest }}"
+  loop:
+    - { src: '/mnt/storage/ansible/aapVersions/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64.tar.gz', dest: '/home/aap/setup/aap_bundle.tar.gz' }
+    - { src: '/home/ansible/ansibleInventory/inventory', dest: '/home/aap/setup/inventory' }
+  become: yes
+  become_user: aap
+
 - name: Extract AAP bundle
   ansible.builtin.unarchive:
     src: /home/aap/setup/aap_bundle.tar.gz
