@@ -1,5 +1,11 @@
----
 # PLAY 2: Update Inventory on the Ansible Server
+- name: Remove existing entry for the VM if it exists
+  ansible.builtin.lineinfile:
+    path: "{{ playbook_dir }}/../inventory"
+    regexp: "^{{ hostvars['kvm_host']['vm_name'] }}\\b"
+    state: absent
+  delegate_to: localhost
+  when: hostvars['kvm_host']['ip_output'] is defined
 
 - name: Add new VM to inventory file
   ansible.builtin.lineinfile:
@@ -30,7 +36,7 @@
 
     # 4. Final Commit and Push
     git add inventory
-    git commit -m "Auto-add {{ hostvars['kvm_host']['vm_name'] }} to inventory"
-    git push origin main
+    # Only commit if there are actually changes to avoid git error codes
+    git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update {{ hostvars['kvm_host']['vm_name'] }} in inventory" && git push origin main)
   delegate_to: localhost
   when: hostvars['kvm_host']['ip_output'] is defined
