@@ -74,6 +74,7 @@
   become_user: aap
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ aap_uid.stdout }}"
+  ignore_errors: yes  
 
 # 4. SSH Trust & Extractions
 - name: Slurp the aap user's public key
