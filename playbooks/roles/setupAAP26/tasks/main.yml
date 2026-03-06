@@ -91,6 +91,14 @@
   vars:
     ansible_port: 2732
 
+- name: Ensure aap setup directory exists
+  ansible.builtin.file:
+    path: /home/aap/setup
+    state: directory
+    owner: aap
+    group: aap
+    mode: '0755'    
+
 - name: Pull AAP bundle and Inventory via SCP
   ansible.builtin.shell:
     cmd: "scp -P 2732 -o StrictHostKeyChecking=no root@192.168.0.249:{{ item.src }} {{ item.dest }}"
