@@ -22,6 +22,13 @@
     generate_ssh_key: yes
     state: present
 
+- name: Grant aap user passwordless sudo
+  ansible.builtin.copy:
+    content: "aap ALL=(ALL) NOPASSWD:ALL\n"
+    dest: /etc/sudoers.d/aap
+    mode: '0440'
+    validate: 'visudo -cf %s'    
+
 - name: Get aap UID
   ansible.builtin.command: id -u aap
   register: aap_uid
