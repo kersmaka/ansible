@@ -6,6 +6,9 @@
       - ansible-core
       - python3-firewall
       - firewalld
+      - podman             # Added Podman here
+      - slirp4netns        # Recommended for rootless networking
+      - python3-pip        # Useful for auxiliary python modules
     state: present
 
 - name: Ensure firewalld is enabled and running
@@ -22,6 +25,16 @@
     generate_ssh_key: yes
     state: present
 
+# Added to ensure the user can actually run podman containers properly
+- name: Ensure subuid and subgid are configured for aap user
+  ansible.builtin.lineinfile:
+    path: "{{ item }}"
+    line: "aap:100000:65536"
+    create: yes
+  loop:
+    - /etc/subuid
+    - /etc/subgid
+    
 - name: Grant aap user passwordless sudo
   ansible.builtin.copy:
     content: "aap ALL=(ALL) NOPASSWD:ALL\n"
