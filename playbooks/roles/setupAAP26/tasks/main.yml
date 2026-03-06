@@ -124,15 +124,17 @@
     owner: aap
     group: aap
 
+# disabling for now
+
 # 5. Final Installation
-- name: Execute Containerized Installer
-  ansible.builtin.command:
-    cmd: "ansible-playbook -i /home/aap/setup/inventory ansible.containerized_installer.install"
-    chdir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/"
-  become: yes
-  become_user: aap
-  environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ aap_uid.stdout }}"
-    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ aap_uid.stdout }}/bus"
-  async: 3600 
-  poll: 60
+#- name: Execute Containerized Installer
+#  ansible.builtin.command:
+#    cmd: "ansible-playbook -i /home/aap/setup/inventory ansible.containerized_installer.install"
+#    chdir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/"
+#  become: yes
+#  become_user: aap
+#  environment:
+#    XDG_RUNTIME_DIR: "/run/user/{{ aap_uid.stdout }}"
+#    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ aap_uid.stdout }}/bus"
+#  async: 3600 
+#  poll: 60
