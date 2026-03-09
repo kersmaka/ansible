@@ -23,7 +23,7 @@
     - name: Create empty 40G target disk
       ansible.builtin.command: "qemu-img create -f qcow2 {{ dest_image }} 40G"
 
-    - name: Resize partitions to fill 30G
+    - name: Resize partitions to fill 40G
       ansible.builtin.command: "virt-resize --expand /dev/vda4 {{ dest_image }}.orig {{ dest_image }}"
 
     - name: Cleanup temporary image
