@@ -80,5 +80,5 @@
 - name: Add ansiblebackup2 entry to /etc/hosts
   ansible.builtin.lineinfile:
     path: /etc/hosts
-    line: "{{ backup2_ip }} ansiblebackup2.homelab.com ansiblebackup2"
+    line: "{{ ansible_default_ipv4.address }} ansiblebackup2.homelab.com ansiblebackup2"
     state: present
