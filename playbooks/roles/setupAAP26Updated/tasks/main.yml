@@ -30,16 +30,30 @@
   vars:
     ansible_port: 2732
 
-- name: Check what SSH keys exist
-  ansible.builtin.find:
-    paths: /home/runner/.ssh/
-    patterns: "*.pub"
-  register: ssh_keys
+- name: Ensure .ssh directory exists for runner
+  ansible.builtin.file:
+    path: /home/runner/.ssh
+    state: directory
+    mode: '0700'
+    owner: runner
   delegate_to: localhost
 
-- name: Print found SSH keys
-  ansible.builtin.debug:
-    msg: "{{ ssh_keys.files | map(attribute='path') | list }}"
+- name: Generate SSH key for runner
+  ansible.builtin.command:
+    cmd: ssh-keygen -t rsa -b 4096 -f /home/runner/.ssh/id_rsa -N ""
+    creates: /home/runner/.ssh/id_rsa
+  delegate_to: localhost
+
+- name: Copy SSH public key to ansiblebackup2 for multiple users
+  ansible.posix.authorized_key:
+    user: "{{ ssh_user }}"
+    state: present
+    key: "{{ lookup('file', '/home/runner/.ssh/id_rsa.pub') }}"
+  loop:
+    - root
+    - aap
+  loop_control:
+    loop_var: ssh_user
 
 - name: Ensure aap setup directory exists
   ansible.builtin.file:
