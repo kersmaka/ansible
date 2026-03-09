@@ -5,29 +5,38 @@
     regexp: "^{{ hostvars['kvm_host']['vm_name'] }}\\b"
     state: absent
   delegate_to: localhost
-  when: new_vm_ip is defined
+  when: hostvars['kvm_host']['ip_output'] is defined
 
 - name: Add new VM to inventory file
   ansible.builtin.lineinfile:
     path: "{{ playbook_dir }}/../inventory"
     insertafter: '^\[newly_provisioned_vms\]'
-    line: "{{ hostvars['kvm_host']['vm_name'] }} ansible_ssh_host={{ new_vm_ip }}"
+    # Use regex_search to ensure ONLY the IP is added to the inventory
+    line: "{{ hostvars['kvm_host']['vm_name'] }} ansible_ssh_host={{ hostvars['kvm_host']['ip_output']['stdout'] | regex_search('IP: (\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})', '\\1') | first }}"
     state: present
   delegate_to: localhost
-  when: new_vm_ip is defined
+  when: hostvars['kvm_host']['ip_output'] is defined
 
 - name: Commit and push to GitHub (Stateless Mode)
   ansible.builtin.shell: |
+    # 1. Setup Identity
     git config --global user.email "kersmaka@gmail.com"
     git config --global user.name "AAP Runner"
     git config --global --add safe.directory /runner/project
+
+    # 2. Re-initialize for the ephemeral AAP container
     cd /runner/project
     rm -rf .git
     git init -b main
     git remote add origin https://{{ github_token }}@github.com/kersmaka/ansible.git
+    
+    # 3. Sync and reset to match remote state
     git fetch origin main
     git reset origin/main
+
+    # 4. Final Commit and Push
     git add inventory
+    # Only commit if there are actually changes to avoid git error codes
     git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update {{ hostvars['kvm_host']['vm_name'] }} in inventory" && git push origin main)
   delegate_to: localhost
-  when: new_vm_ip is defined
+  when: hostvars['kvm_host']['ip_output'] is defined
