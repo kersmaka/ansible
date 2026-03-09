@@ -66,11 +66,13 @@
 
 - name: Pull AAP bundle and Inventory via SCP
   ansible.builtin.shell:
-    cmd: "scp -P 2732 -o StrictHostKeyChecking=no root@192.168.0.249:{{ item.src }} {{ item.dest }}"
-    creates: "{{ item.dest }}"
+    cmd: "scp -P 2732 -o StrictHostKeyChecking=no root@192.168.0.249:{{ scp_item.src }} {{ scp_item.dest }}"
+    creates: "{{ scp_item.dest }}"
   loop:
     - { src: '/mnt/storage/ansible/aapVersions/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64.tar.gz', dest: '/home/aap/setup/aap_bundle.tar.gz' }
     - { src: '/home/ansible/ansibleInventory/inventory', dest: '/home/aap/setup/inventory' }
+  loop_control:
+    loop_var: scp_item
   become: yes
   become_user: aap
 
@@ -92,5 +94,5 @@
 - name: Add ansiblebackup2 entry to /etc/hosts
   ansible.builtin.lineinfile:
     path: /etc/hosts
-    line: "{{ ansiblebackup2_ip }} ansiblebackup2.homelab.com ansiblebackup2"
+    line: "{{ ansible_default_ipv4.address }} ansiblebackup2.homelab.com ansiblebackup2"
     state: present
