@@ -89,6 +89,9 @@
         src: /root/.ssh/id_rsa.pub
       register: ansible_host_pubkey
       delegate_to: ansible.homelab.com
+      vars:
+        ansible_user: root
+        ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
 
     - name: Inject ansible.homelab.com key into new VM authorized_keys
       ansible.posix.authorized_key:
