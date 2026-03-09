@@ -53,6 +53,10 @@
       ansible.builtin.shell: "/home/tools/ipCheck.sh {{ vm_name }}"
       register: ip_output
 
+    - name: Debug IP output
+      ansible.builtin.debug:
+        msg: "{{ ip_output.stdout }}"  
+
     - name: Add new VM to /etc/hosts on kvm_host
       ansible.builtin.lineinfile:
         path: /etc/hosts
