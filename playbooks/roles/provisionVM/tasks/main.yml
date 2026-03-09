@@ -71,22 +71,11 @@
         state: directory
         mode: '0700'
 
-    - name: Generate SSH key if not present
+    - name: Generate SSH key on localhost if not present
       ansible.builtin.command:
-        cmd: ssh-keygen -t rsa -b 4096 -f /home/runner/.ssh/id_rsa -N ""
-        creates: /home/runner/.ssh/id_rsa
-
-    - name: Install sshpass
-      ansible.builtin.package:
-        name: sshpass
-        state: present
-
-    - name: Bootstrap SSH trust to ansible.homelab.com
-      ansible.builtin.shell: >
-        sshpass -p 'redhat' ssh-copy-id
-        -i /home/runner/.ssh/id_rsa.pub
-        -o StrictHostKeyChecking=no
-        root@ansible.homelab.com
+        cmd: ssh-keygen -t rsa -b 4096 -f /root/.ssh/id_rsa -N ""
+        creates: /root/.ssh/id_rsa
+      delegate_to: localhost
 
     - name: Slurp ansible.homelab.com public key
       ansible.builtin.slurp:
