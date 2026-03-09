@@ -1,4 +1,9 @@
 ---
+- name: Bootstrap SSH trust to ansiblebackup2 for root
+  ansible.builtin.shell:
+    cmd: "ssh-copy-id -i /home/runner/.ssh/id_rsa.pub -o StrictHostKeyChecking=no root@ansiblebackup2.homelab.com"
+  delegate_to: localhost
+
 # 1. OS & Dependency Setup
 - name: Install required system packages
   ansible.builtin.dnf:
