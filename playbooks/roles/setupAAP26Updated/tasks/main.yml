@@ -30,6 +30,14 @@
   vars:
     ansible_port: 2732
 
+- name: Generate SSH key pair for runner if not present
+  ansible.builtin.user:
+    name: runner
+    generate_ssh_key: yes
+    ssh_key_file: .ssh/id_rsa
+    ssh_key_type: rsa
+    ssh_key_bits: 4096
+
 - name: Copy SSH public key to ansiblebackup2 for multiple users
   ansible.posix.authorized_key:
     user: "{{ ssh_user }}"
