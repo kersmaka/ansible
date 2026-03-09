@@ -30,22 +30,14 @@
   vars:
     ansible_port: 2732
 
-- name: Generate SSH key
-  ansible.builtin.command:
-    cmd: ssh-keygen -t rsa -b 4096 -f /home/runner/.ssh/id_rsa -N ""
-    creates: /home/runner/.ssh/id_rsa
-  delegate_to: localhost
-
 - name: Copy SSH public key to ansiblebackup2 for multiple users
   ansible.posix.authorized_key:
-    user: "{{ ssh_user }}"
+    user: "{{ item }}"
     state: present
-    key: "{{ lookup('file', '/home/runner/.ssh/id_rsa.pub') }}"
+    key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
   loop:
     - root
     - aap
-  loop_control:
-    loop_var: ssh_user
 
 - name: Ensure aap setup directory exists
   ansible.builtin.file:
@@ -80,5 +72,5 @@
 - name: Add ansiblebackup2 entry to /etc/hosts
   ansible.builtin.lineinfile:
     path: /etc/hosts
-    line: "{{ ansible_default_ipv4.address }} ansiblebackup2.homelab.com ansiblebackup2"
+    line: "{{ backup2_ip }} ansiblebackup2.homelab.com ansiblebackup2"
     state: present
