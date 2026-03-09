@@ -30,15 +30,7 @@
   vars:
     ansible_port: 2732
 
-- name: Ensure .ssh directory exists for runner
-  ansible.builtin.file:
-    path: /home/runner/.ssh
-    state: directory
-    mode: '0700'
-    owner: runner
-  delegate_to: localhost
-
-- name: Generate SSH key for runner
+- name: Generate SSH key
   ansible.builtin.command:
     cmd: ssh-keygen -t rsa -b 4096 -f /home/runner/.ssh/id_rsa -N ""
     creates: /home/runner/.ssh/id_rsa
