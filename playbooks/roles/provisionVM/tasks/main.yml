@@ -61,6 +61,10 @@
       ansible.builtin.command:
         cmd: ssh-keygen -t rsa -b 4096 -f /home/runner/.ssh/id_rsa -N ""
         creates: /home/runner/.ssh/id_rsa
+    - name: Install sshpass
+      ansible.builtin.dnf:
+        name: sshpass
+        state: present    
     - name: Bootstrap SSH trust to new VM
       ansible.builtin.shell: >
         sshpass -p 'redhat' ssh-copy-id
