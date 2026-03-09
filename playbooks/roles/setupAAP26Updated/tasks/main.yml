@@ -1,0 +1,76 @@
+---
+# 1. OS & Dependency Setup
+- name: Install required system packages
+  ansible.builtin.dnf:
+    name:
+      - ansible-core
+    state: present
+
+- name: Create the aap user
+  ansible.builtin.user:
+    name: aap
+    password: "{{ 'redhat' | password_hash('sha512') }}"
+    groups: wheel
+    generate_ssh_key: yes
+    append: true 
+    state: present
+
+# 4. SSH Trust & Extractions
+- name: Slurp the aap user's public key
+  ansible.builtin.slurp:
+    src: /home/aap/.ssh/id_rsa.pub
+  register: aap_pub_key
+
+- name: Inject aap public key into Debian root authorized_keys
+  ansible.posix.authorized_key:
+    user: root
+    state: present
+    key: "{{ aap_pub_key['content'] | b64decode }}"
+  delegate_to: 192.168.0.249
+  vars:
+    ansible_port: 2732
+
+- name: Copy SSH public key to ansiblebackup2 for multiple users
+  ansible.posix.authorized_key:
+    user: "{{ item }}"
+    state: present
+    key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+  loop:
+    - root
+    - aap
+
+- name: Ensure aap setup directory exists
+  ansible.builtin.file:
+    path: /home/aap/setup
+    state: directory
+    owner: aap
+    group: aap
+    mode: '0755'    
+
+- name: Pull AAP bundle and Inventory via SCP
+  ansible.builtin.shell:
+    cmd: "scp -P 2732 -o StrictHostKeyChecking=no root@192.168.0.249:{{ item.src }} {{ item.dest }}"
+    creates: "{{ item.dest }}"
+  loop:
+    - { src: '/mnt/storage/ansible/aapVersions/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64.tar.gz', dest: '/home/aap/setup/aap_bundle.tar.gz' }
+    - { src: '/home/ansible/ansibleInventory/inventory', dest: '/home/aap/setup/inventory' }
+  become: yes
+  become_user: aap
+
+- name: Extract AAP bundle
+  ansible.builtin.unarchive:
+    src: /home/aap/setup/aap_bundle.tar.gz
+    dest: /home/aap/
+    remote_src: yes
+    owner: aap
+    group: aap
+
+- name: Get IP address of ansiblebackup2.homelab.com
+  ansible.builtin.set_fact:
+    backup2_ip: "{{ lookup('dig', 'ansiblebackup2.homelab.com') }}"
+
+- name: Add ansiblebackup2 entry to /etc/hosts
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "{{ backup2_ip }} ansiblebackup2.homelab.com ansiblebackup2"
+    state: present
