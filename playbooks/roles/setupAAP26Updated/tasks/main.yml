@@ -32,12 +32,14 @@
 
 - name: Copy SSH public key to ansiblebackup2 for multiple users
   ansible.posix.authorized_key:
-    user: "{{ item }}"
+    user: "{{ ssh_user }}"
     state: present
-    key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+    key: "{{ lookup('file', lookup('env', 'HOME') + '/.ssh/id_rsa.pub') }}"
   loop:
     - root
     - aap
+  loop_control:
+    loop_var: ssh_user
 
 - name: Ensure aap setup directory exists
   ansible.builtin.file:
