@@ -30,24 +30,16 @@
   vars:
     ansible_port: 2732
 
-- name: Generate SSH key pair for runner if not present
-  ansible.builtin.user:
-    name: runner
-    generate_ssh_key: yes
-    ssh_key_file: .ssh/id_rsa
-    ssh_key_type: rsa
-    ssh_key_bits: 4096
+- name: Check what SSH keys exist
+  ansible.builtin.find:
+    paths: /home/runner/.ssh/
+    patterns: "*.pub"
+  register: ssh_keys
+  delegate_to: localhost
 
-- name: Copy SSH public key to ansiblebackup2 for multiple users
-  ansible.posix.authorized_key:
-    user: "{{ ssh_user }}"
-    state: present
-    key: "{{ lookup('file', lookup('env', 'HOME') + '/.ssh/id_rsa.pub') }}"
-  loop:
-    - root
-    - aap
-  loop_control:
-    loop_var: ssh_user
+- name: Print found SSH keys
+  ansible.builtin.debug:
+    msg: "{{ ssh_keys.files | map(attribute='path') | list }}"
 
 - name: Ensure aap setup directory exists
   ansible.builtin.file:
