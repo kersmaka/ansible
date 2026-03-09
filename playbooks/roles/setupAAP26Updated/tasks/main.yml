@@ -34,7 +34,7 @@
   ansible.posix.authorized_key:
     user: "{{ ssh_user }}"
     state: present
-    key: "{{ lookup('file', lookup('env', 'HOME') + '/.ssh/id_rsa.pub') }}"
+    key: "{{ lookup('file', '/root/.ssh/id_rsa.pub') }}"
   loop:
     - root
     - aap
