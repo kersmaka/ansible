@@ -1,4 +1,3 @@
-# 6. Final Installation
 - name: Enable lingering for aap user
   command: loginctl enable-linger aap
   become: true
