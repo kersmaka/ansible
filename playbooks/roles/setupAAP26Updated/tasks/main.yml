@@ -96,3 +96,11 @@
     path: /etc/hosts
     line: "{{ ansible_default_ipv4.address }} ansiblebackup2.homelab.com ansiblebackup2"
     state: present
+
+ # 5. Final Installation
+- name: Execute Containerized Installer
+  ansible.builtin.command:
+    cmd: "time ansible-playbook -i /home/aap/setup/inventory ansible.containerized_installer.install"
+    chdir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/"
+  become: yes
+  become_user: aap    
