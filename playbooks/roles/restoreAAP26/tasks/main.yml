@@ -21,11 +21,16 @@
   delegate_to: ansible.homelab.com
   become_user: aap
   shell: >
-    scp -o StrictHostKeyChecking=no
+    scp
+    -o StrictHostKeyChecking=no
+    -o BatchMode=yes
+    -o ConnectTimeout=30
     /home/aap/aap-backup-manual.tar.gz
     aap@ansiblebackup2.homelab.com:/home/aap/aap-backup-manual.tar.gz
   args:
     executable: /bin/bash
+  async: 3600
+  poll: 30
 # ── 3. Enable lingering for aap user ───────────────────────────────────────
 - name: Enable lingering for aap user
   command: loginctl enable-linger aap
