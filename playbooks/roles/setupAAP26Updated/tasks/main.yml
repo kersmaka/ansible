@@ -96,3 +96,24 @@
     path: /etc/hosts
     line: "{{ ansible_default_ipv4.address }} ansiblebackup2.homelab.com ansiblebackup2"
     state: present
+
+# install AAP 26
+
+- name: Enable lingering for aap user
+  command: loginctl enable-linger aap
+  become: true
+
+- name: Get aap user UID
+  command: id -u aap
+  register: aap_uid
+  changed_when: false
+ 
+- name: Execute Containerized Installer
+  shell: ansible-playbook -i /home/aap/setup/inventory ansible.containerized_installer.install
+  args:
+    chdir: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64
+  become: true
+  become_user: aap
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ aap_uid.stdout }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ aap_uid.stdout }}/bus"
