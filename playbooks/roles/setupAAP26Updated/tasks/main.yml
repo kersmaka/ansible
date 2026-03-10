@@ -102,18 +102,17 @@
   command: loginctl enable-linger aap
   become: true
 
-- name: Ensure XDG_RUNTIME_DIR exists for aap
-  file:
-    path: /run/user/{{ ansible_facts['getent_passwd']['aap'][1] }}
-    state: directory
-    owner: aap
-    group: aap
-    mode: '0700'
-  become: true
+- name: Get aap user UID
+  command: id -u aap
+  register: aap_uid
+  changed_when: false
  
 - name: Execute Containerized Installer
-  ansible.builtin.command:
-    cmd: "ansible-playbook -i /home/aap/setup/inventory ansible.containerized_installer.install"
-    chdir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/"
-  become: yes
-  become_user: aap    
+  shell: ansible-playbook -i /home/aap/setup/inventory ansible.containerized_installer.install
+  args:
+    chdir: /home/aap/setup/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64
+  become: true
+  become_user: aap
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ aap_uid.stdout }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ aap_uid.stdout }}/bus"
