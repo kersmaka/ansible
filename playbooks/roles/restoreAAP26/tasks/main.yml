@@ -1,3 +1,18 @@
+- name: Resolve ansiblebackup2.homelab.com IP from runner
+  command: getent hosts ansiblebackup2.homelab.com
+  register: ansiblebackup2_host
+  delegate_to: localhost
+  changed_when: false
+
+- name: Add ansiblebackup2 to /etc/hosts on ansible.homelab.com
+  lineinfile:
+    path: /etc/hosts
+    line: "{{ ansiblebackup2_host.stdout.split()[0] }} ansiblebackup2.homelab.com"
+    regexp: '.*ansiblebackup2\.homelab\.com.*'
+    state: present
+  become: true
+  delegate_to: ansible.homelab.com
+
 - name: Create AAP backup tarball on ansible.homelab.com
   delegate_to: ansible.homelab.com
   become_user: aap
@@ -7,6 +22,7 @@
   args:
     executable: /bin/bash
     creates: /home/aap/aap-backup-manual.tar.gz
+    
 - name: SCP backup from ansible to ansiblebackup2
   delegate_to: ansible.homelab.com
   become_user: aap
