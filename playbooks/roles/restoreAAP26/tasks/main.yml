@@ -13,7 +13,7 @@
   shell: >
     scp -o StrictHostKeyChecking=no
     /home/aap/aap-backup-manual.tar.gz
-    aap@ansiblebackup2.homelab.com:/home/aap/setup/aap-backup-manual.tar.gz
+    aap@192.168.0.249:/home/aap/setup/aap-backup-manual.tar.gz
   args:
     executable: /bin/bash
 # ── 3. Enable lingering for aap user ───────────────────────────────────────
