@@ -64,18 +64,15 @@
     owner: aap
     group: aap
 
-# ── 3. Rename files to match the new hostname ─────────────────────────────
-# The installer expects filenames like postgresql_<inventory_hostname>.tar.gz
 - name: Rename backup artifacts to match the destination hostname
-  shell: |
+  ansible.builtin.shell: |
+    cd /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/backups/
     for file in *ansible.homelab.com*; do
+      [ -e "$file" ] || continue  # skip if glob finds nothing
       mv "$file" "${file//ansible.homelab.com/ansiblebackup2.homelab.com}"
     done
   args:
     chdir: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/backups/
-    executable: /bin/bash
-  register: rename_result
-  changed_when: rename_result.stdout != ""
 
 # ── 3. Enable lingering for aap user ───────────────────────────────────────
 - name: Enable lingering for aap user
