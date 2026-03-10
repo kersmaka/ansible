@@ -1,3 +1,16 @@
+- name: Slurp aap public key from ansible.homelab.com
+  slurp:
+    src: /home/aap/.ssh/id_rsa.pub
+  register: ansible_aap_pubkey
+  delegate_to: ansible.homelab.com
+  become_user: aap
+
+- name: Inject ansible aap public key into ansiblebackup2 authorized_keys
+  authorized_key:
+    user: aap
+    state: present
+    key: "{{ ansible_aap_pubkey.content | b64decode }}"
+
 - name: Add ansiblebackup2 to /etc/hosts on ansible.homelab.com
   lineinfile:
     path: /etc/hosts
