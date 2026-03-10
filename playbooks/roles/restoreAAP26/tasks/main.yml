@@ -83,12 +83,11 @@
   register: aap_uid
   changed_when: false
 
-# ── 5. Run the restore playbook ────────────────────────────────────────────
 - name: Execute Containerized Restore
   shell: >
     ansible-playbook -i /home/aap/setup/inventory
     ansible.containerized_installer.restore
-    -e "backup_dir=/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/backups"
+    -e "backup_dir=/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64"
   args:
     chdir: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64
   become_user: aap
