@@ -4,99 +4,19 @@
   ansible.builtin.dnf:
     name:
       - ansible-core
-      - python3-firewall
-      - firewalld
-      - podman             # Added Podman here
-      - slirp4netns        # Recommended for rootless networking
-      - python3-pip        # Useful for auxiliary python modules
     state: present
 
-- name: Ensure firewalld is enabled and running
-  ansible.builtin.systemd:
-    name: firewalld
-    state: started
-    enabled: yes
-
+# 2. User Setup
 - name: Create the aap user
   ansible.builtin.user:
     name: aap
     password: "{{ 'redhat' | password_hash('sha512') }}"
     groups: wheel
     generate_ssh_key: yes
+    append: true
     state: present
 
-# Added to ensure the user can actually run podman containers properly
-- name: Ensure subuid and subgid are configured for aap user
-  ansible.builtin.lineinfile:
-    path: "{{ item }}"
-    line: "aap:100000:65536"
-    create: yes
-  loop:
-    - /etc/subuid
-    - /etc/subgid
-    
-- name: Grant aap user passwordless sudo
-  ansible.builtin.copy:
-    content: "aap ALL=(ALL) NOPASSWD:ALL\n"
-    dest: /etc/sudoers.d/aap
-    mode: '0440'
-    validate: 'visudo -cf %s'    
-
-- name: Get aap UID
-  ansible.builtin.command: id -u aap
-  register: aap_uid
-  changed_when: false
-
-- name: Enable lingering for aap user
-  ansible.builtin.command:
-    cmd: "loginctl enable-linger aap"
-    creates: "/var/lib/systemd/linger/aap"
-
-# 2. Networking Fixes (Crucial for 443 Binding)
-- name: Allow aap user to bind to privileged ports (80/443)
-  ansible.posix.sysctl:
-    name: net.ipv4.ip_unprivileged_port_start
-    value: '80'
-    sysctl_set: yes
-    state: present
-    reload: yes
-
-- name: Open HTTP and HTTPS ports in firewalld
-  ansible.posix.firewalld:
-    service: "{{ item }}"
-    permanent: yes
-    state: enabled
-    immediate: yes
-  loop: [http, https]
-
-# 3. Robust Cleanup (Fixes the "container is running" error)
-- name: Force stop all existing containers
-  ansible.builtin.shell:
-    cmd: "podman stop --all"
-  become: yes
-  become_user: aap
-  ignore_errors: yes
-
-- name: Force remove all existing containers
-  ansible.builtin.shell:
-    cmd: "podman rm --all --force"
-  become: yes
-  become_user: aap
-  ignore_errors: yes
-
-- name: Start Podman user socket
-  ansible.builtin.systemd:
-    name: podman.socket
-    scope: user
-    state: started
-    enabled: yes
-  become: yes
-  become_user: aap
-  environment:
-    XDG_RUNTIME_DIR: "/run/user/{{ aap_uid.stdout }}"
-  ignore_errors: yes  
-
-# 4. SSH Trust & Extractions
+# 3. SSH Trust
 - name: Slurp the aap user's public key
   ansible.builtin.slurp:
     src: /home/aap/.ssh/id_rsa.pub
@@ -111,21 +31,48 @@
   vars:
     ansible_port: 2732
 
+- name: Ensure .ssh directory exists on AAP container
+  ansible.builtin.file:
+    path: /root/.ssh
+    state: directory
+    mode: '0700'
+  delegate_to: localhost
+
+- name: Generate SSH key on AAP container if not present
+  ansible.builtin.command:
+    cmd: ssh-keygen -t rsa -b 4096 -f /root/.ssh/id_rsa -N ""
+    creates: /root/.ssh/id_rsa
+  delegate_to: localhost
+
+- name: Copy SSH public key to ansiblebackup2 for multiple users
+  ansible.posix.authorized_key:
+    user: "{{ ssh_user }}"
+    state: present
+    key: "{{ lookup('file', '/root/.ssh/id_rsa.pub') }}"
+  loop:
+    - root
+    - aap
+  loop_control:
+    loop_var: ssh_user
+
+# 4. AAP Bundle Setup
 - name: Ensure aap setup directory exists
   ansible.builtin.file:
     path: /home/aap/setup
     state: directory
     owner: aap
     group: aap
-    mode: '0755'    
+    mode: '0755'
 
 - name: Pull AAP bundle and Inventory via SCP
   ansible.builtin.shell:
-    cmd: "scp -P 2732 -o StrictHostKeyChecking=no root@192.168.0.249:{{ item.src }} {{ item.dest }}"
-    creates: "{{ item.dest }}"
+    cmd: "scp -P 2732 -o StrictHostKeyChecking=no root@192.168.0.249:{{ scp_item.src }} {{ scp_item.dest }}"
+    creates: "{{ scp_item.dest }}"
   loop:
     - { src: '/mnt/storage/ansible/aapVersions/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64.tar.gz', dest: '/home/aap/setup/aap_bundle.tar.gz' }
     - { src: '/home/ansible/ansibleInventory/inventory', dest: '/home/aap/setup/inventory' }
+  loop_control:
+    loop_var: scp_item
   become: yes
   become_user: aap
 
@@ -137,17 +84,36 @@
     owner: aap
     group: aap
 
-# disabling for now
+# 5. /etc/hosts
+- name: Remove stale ansiblebackup2 entry from /etc/hosts
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '.*ansiblebackup2.*'
+    state: absent
 
-# 5. Final Installation
-#- name: Execute Containerized Installer
-#  ansible.builtin.command:
-#    cmd: "ansible-playbook -i /home/aap/setup/inventory ansible.containerized_installer.install"
-#    chdir: "/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/"
-#  become: yes
-#  become_user: aap
-#  environment:
-#    XDG_RUNTIME_DIR: "/run/user/{{ aap_uid.stdout }}"
-#    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ aap_uid.stdout }}/bus"
-#  async: 3600 
-#  poll: 60
+- name: Add ansiblebackup2 entry to /etc/hosts
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "{{ ansible_default_ipv4.address }} ansiblebackup2.homelab.com ansiblebackup2"
+    state: present
+
+# install AAP 26
+
+- name: Enable lingering for aap user
+  command: loginctl enable-linger aap
+  become: true
+
+- name: Get aap user UID
+  command: id -u aap
+  register: aap_uid
+  changed_when: false
+ 
+- name: Execute Containerized Installer
+  shell: ansible-playbook -i /home/aap/setup/inventory ansible.containerized_installer.install
+  args:
+    chdir: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64
+  become: true
+  become_user: aap
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ aap_uid.stdout }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ aap_uid.stdout }}/bus"
