@@ -13,7 +13,7 @@
   shell: >
     scp -o StrictHostKeyChecking=no
     /home/aap/aap-backup-manual.tar.gz
-    aap@192.168.0.249:/home/aap/setup/aap-backup-manual.tar.gz
+    aap@ansiblebackup2.homelab.com:/home/aap/aap-backup-manual.tar.gz
   args:
     executable: /bin/bash
 # ── 3. Enable lingering for aap user ───────────────────────────────────────
@@ -29,7 +29,7 @@
   shell: >
     ansible-playbook -i /home/aap/setup/inventory
     ansible.containerized_installer.restore
-    -e "restore_backup_file=/home/aap/setup/aap-backup-manual.tar.gz"
+    -e "restore_backup_file=/home/aap/aap-backup-manual.tar.gz"
   args:
     chdir: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64
   become_user: aap
