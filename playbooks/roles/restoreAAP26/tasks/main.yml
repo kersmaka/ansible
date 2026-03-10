@@ -44,6 +44,39 @@
     executable: /bin/bash
   async: 3600
   poll: 30
+
+  # ── 1. Prepare the bundle backup directory ────────────────────────────────
+- name: Ensure the backups directory exists in the bundle
+  file:
+    path: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/backups
+    state: directory
+    owner: aap
+    group: aap
+    mode: '0755'
+
+# ── 2. Extract and Flatten ────────────────────────────────────────────────
+- name: Extract manual backup into the bundle backups folder
+  unarchive:
+    src: /home/aap/aap-backup-manual.tar.gz
+    dest: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/backups/
+    remote_src: yes
+    extra_opts: ['--strip-components=1'] # Removes the leading directory structure from the tarball
+    owner: aap
+    group: aap
+
+# ── 3. Rename files to match the new hostname ─────────────────────────────
+# The installer expects filenames like postgresql_<inventory_hostname>.tar.gz
+- name: Rename backup artifacts to match the destination hostname
+  shell: |
+    for file in *ansible.homelab.com*; do
+      mv "$file" "${file//ansible.homelab.com/ansiblebackup2.homelab.com}"
+    done
+  args:
+    chdir: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/backups/
+    executable: /bin/bash
+  register: rename_result
+  changed_when: rename_result.stdout != ""
+
 # ── 3. Enable lingering for aap user ───────────────────────────────────────
 - name: Enable lingering for aap user
   command: loginctl enable-linger aap
