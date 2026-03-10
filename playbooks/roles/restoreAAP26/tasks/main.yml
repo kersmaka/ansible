@@ -1,18 +1,23 @@
-    # ── 1. Create the tar backup on the SOURCE host (ansible) ──────────────────
+# ── 1. Create the tar backup ──────────────────────────────────────────────────
 - name: Create AAP backup tarball on ansible host
-  delegate_to: ansible.homelab.com
-  command: >
-    tar -cvzf /home/aap/aap-backup-manual.tar.gz
-    /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64/backups/
+  delegate_to: localhost
+  shell: >
+    ssh -o StrictHostKeyChecking=no
+    aap@ansible.homelab.com
+    "tar -cvzf /home/aap/aap-backup-manual.tar.gz
+    /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64/backups/"
   args:
-    creates: /home/aap/aap-backup-manual.tar.gz
-# ── 2. SCP the backup from ansible to ansiblebackup2 ───────────────────────
+    executable: /bin/bash
+
+# ── 2. SCP backup to ansiblebackup2 ──────────────────────────────────────────
 - name: Copy AAP backup tarball to ansiblebackup2
-  delegate_to: ansible.homelab.com
-  command: >
+  delegate_to: localhost
+  shell: >
     scp -o StrictHostKeyChecking=no
-    /home/aap/aap-backup-manual.tar.gz
+    aap@ansible.homelab.com:/home/aap/aap-backup-manual.tar.gz
     aap@ansiblebackup2.homelab.com:/home/aap/setup/aap-backup-manual.tar.gz
+  args:
+    executable: /bin/bash
 # ── 3. Enable lingering for aap user ───────────────────────────────────────
 - name: Enable lingering for aap user
   command: loginctl enable-linger aap
