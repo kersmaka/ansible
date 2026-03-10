@@ -1,0 +1,14 @@
+- name: Get aap user UID
+  command: id -u aap
+  register: aap_uid
+  changed_when: false
+
+- name: Run AAP containerized backup
+  shell: |
+    ansible-playbook -i inventory ansible.containerized_installer.backup
+  args:
+    chdir: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64
+  become_user: aap
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ aap_uid.stdout }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ aap_uid.stdout }}/bus"
