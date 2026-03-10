@@ -20,22 +20,12 @@
   become: true
   delegate_to: ansible.homelab.com
 
-- name: Find most recent backup directory on ansible.homelab.com
-  shell: |
-    ls -1dt /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64/backups/*/ | head -1 | xargs -I{} basename {}
-  args:
-    executable: /bin/bash
-  register: latest_backup_dir
-  changed_when: false
-  delegate_to: ansible.homelab.com
-  become_user: aap
-
-- name: Create AAP backup tarball from most recent backup on ansible.homelab.com
+- name: Create AAP backup tarball on ansible.homelab.com
   delegate_to: ansible.homelab.com
   become_user: aap
   shell: >
     tar -czf /home/aap/aap-backup-manual.tar.gz
-    /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64/backups/{{ latest_backup_dir.stdout }}/
+    /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64/backups/
   args:
     executable: /bin/bash
 
