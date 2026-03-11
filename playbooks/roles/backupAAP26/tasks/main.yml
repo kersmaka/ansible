@@ -3,9 +3,19 @@
   register: aap_uid
   changed_when: false
 
+- name: Write vault password to temp file
+  copy:
+    content: "{{ vault_password }}"
+    dest: /home/aap/.vault_pass
+    owner: aap
+    group: aap
+    mode: '0600'
+  no_log: true
+
 - name: Run AAP containerized backup
   shell: |
-    ansible-playbook -i inventory ansible.containerized_installer.backup
+    ansible-playbook -i inventory ansible.containerized_installer.backup \
+      --vault-password-file /home/aap/.vault_pass
   args:
     chdir: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64
   become_user: aap
@@ -13,41 +23,8 @@
     XDG_RUNTIME_DIR: "/run/user/{{ aap_uid.stdout }}"
     DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ aap_uid.stdout }}/bus"
 
-- name: Create backup directory for additional files
+- name: Remove vault password temp file
   file:
-    path: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64/backups/additional
-    state: directory
-    owner: aap
-    group: aap
-    mode: '0750'
-
-- name: Backup inventory file
-  copy:
-    src: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64/inventory
-    dest: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64/backups/additional/inventory
-    remote_src: true
-    owner: aap
-    group: aap
-    mode: '0640'
-
-- name: Backup vault file
-  copy:
-    src: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64/group_vars/all/vault.yml
-    dest: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64/backups/additional/vault.yml
-    remote_src: true
-    owner: aap
-    group: aap
-    mode: '0640'
-
-- name: Backup SSL certificates and key
-  copy:
-    src: "{{ item }}"
-    dest: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64/backups/additional/
-    remote_src: true
-    owner: aap
-    group: aap
-    mode: '0640'
-  loop:
-    - /home/aap/ssl/ansible.homelab.com.crt
-    - /home/aap/ssl/ansible.homelab.com.key
-    - /home/aap/ssl/root_ca.crt
+    path: /home/aap/.vault_pass
+    state: absent
+  no_log: true
