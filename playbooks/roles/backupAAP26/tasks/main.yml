@@ -4,6 +4,7 @@
   changed_when: false
 
 - name: Backup block
+  become: true
   block:
     - name: Write vault password to temp file
       copy:
