@@ -43,13 +43,14 @@
           -C {{ aap_bundle_path | default('/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64') }} \
             backups \
             inventory \
+            group_vars \
           -C /home/aap \
             ssl \
             {{ manifest_file.files[0].path | basename }}
-      args:
-        chdir: /home/aap
-      become_user: aap
-      changed_when: true
+          args:
+            chdir: /home/aap
+          become_user: aap
+          changed_when: true
 
   always:
     - name: Remove vault password temp file
