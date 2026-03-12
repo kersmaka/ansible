@@ -24,6 +24,32 @@
       environment:
         XDG_RUNTIME_DIR: "/run/user/{{ aap_uid.stdout }}"
         DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ aap_uid.stdout }}/bus"
+
+    - name: Find manifest zip file
+      find:
+        paths: /home/aap
+        patterns: "manifest_*.zip"
+      register: manifest_file
+
+    - name: Fail if no manifest file found
+      fail:
+        msg: "No manifest_*.zip found in /home/aap — cannot create DR tarball"
+      when: manifest_file.files | length == 0
+
+    - name: Create DR tarball containing all backup artifacts
+      shell: |
+        tar -czf /home/aap/ansibleDR.tar.gz \
+          -C {{ aap_bundle_path | default('/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64') }} \
+            backups \
+            inventory \
+          -C /home/aap \
+            ssl \
+            {{ manifest_file.files[0].path | basename }}
+      args:
+        chdir: /home/aap
+      become_user: aap
+      changed_when: true
+
   always:
     - name: Remove vault password temp file
       file:
