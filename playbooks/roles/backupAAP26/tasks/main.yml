@@ -1,11 +1,9 @@
 - name: Check available disk space before backup
   assert:
     that:
-      - ansible_mounts | selectattr('mount', 'equalto', '/') 
+      - ansible_mounts | selectattr('mount', 'equalto', '/')
           | map(attribute='size_available') | first > 10737418240
-    fail_msg: "Less than 10GB free on /home — aborting backup to avoid partial run"
-  vars:
-    ansible_mounts: "{{ ansible_mounts }}"
+    fail_msg: "Less than 10GB free on / — aborting backup to avoid partial run"
 
 - name: Get aap user UID
   command: id -u aap
@@ -56,10 +54,10 @@
           -C /home/aap \
             ssl \
             {{ manifest_file.files[0].path | basename }}
-          args:
-            chdir: /home/aap
-          become_user: aap
-          changed_when: true
+      args:
+        chdir: /home/aap
+      become_user: aap
+      changed_when: true
 
   always:
     - name: Remove vault password temp file
