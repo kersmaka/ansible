@@ -1,3 +1,12 @@
+- name: Check available disk space before backup
+  assert:
+    that:
+      - ansible_mounts | selectattr('mount', 'equalto', '/') 
+          | map(attribute='size_available') | first > 10737418240
+    fail_msg: "Less than 10GB free on /home — aborting backup to avoid partial run"
+  vars:
+    ansible_mounts: "{{ ansible_mounts }}"
+
 - name: Get aap user UID
   command: id -u aap
   register: aap_uid
