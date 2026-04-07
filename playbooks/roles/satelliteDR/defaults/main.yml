@@ -1,2 +1,4 @@
 ---
-# defaults file for buildPodman
+puppet_release_rpm: "https://yum.puppet.com/puppet8-release-el-9.noarch.rpm"
+foreman_release_rpm: "https://yum.theforeman.org/releases/3.17/el9/x86_64/foreman-release.rpm"
+foreman_installer_package: "foreman-installer"
