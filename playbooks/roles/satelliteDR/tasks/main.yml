@@ -51,3 +51,21 @@
     - foreman
     - install
   notify: Confirm foreman-installer version
+
+- name: Get primary IPv4 address
+  ansible.builtin.set_fact:
+    foreman_ip: "{{ ansible_default_ipv4.address }}"
+  tags:
+    - preflight
+    - networking
+
+- name: Ensure foreman.homelab.com is in /etc/hosts
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '.*foreman\.homelab\.com.*'
+    line: "{{ foreman_ip }}\tforeman.homelab.com foreman"
+    state: present
+    backup: yes
+  tags:
+    - preflight
+    - networking
