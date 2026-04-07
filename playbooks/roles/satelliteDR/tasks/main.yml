@@ -69,3 +69,11 @@
   tags:
     - preflight
     - networking
+
+- name: Run foreman-installer
+  ansible.builtin.command:
+    cmd: foreman-installer
+    creates: /etc/foreman/settings.yaml
+  tags:
+    - foreman
+    - install    
