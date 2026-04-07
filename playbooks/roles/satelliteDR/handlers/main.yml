@@ -1,7 +1,7 @@
 ---
 - name: Confirm foreman-installer version
   ansible.builtin.command:
-    cmd: foreman-installer --version
+    cmd: rpm -q foreman-installer
   register: fi_version
   changed_when: false
   listen: Confirm foreman-installer version
