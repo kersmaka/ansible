@@ -1,6 +1,6 @@
 ---
 puppet_gpg_key: "https://yum.puppet.com/RPM-GPG-KEY-puppet"
 puppet_release_rpm: "https://yum.puppet.com/puppet8-release-el-9.noarch.rpm"
-foreman_gpg_key: "https://yum.theforeman.org/releases/3.17/el9/x86_64/RPM-GPG-KEY-foreman"
+foreman_gpg_key: "https://yum.theforeman.org/releases/3.17/RPM-GPG-KEY-foreman"
 foreman_release_rpm: "https://yum.theforeman.org/releases/3.17/el9/x86_64/foreman-release.rpm"
 foreman_installer_package: "foreman-installer"
