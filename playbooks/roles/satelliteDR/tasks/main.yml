@@ -79,7 +79,7 @@
     - install    
 
 - name: Ensure rsync is installed on kvm_host
-  ansible.builtin.dnf:
+  ansible.builtin.package:
     name: rsync
     state: present
   delegate_to: kvm_host
