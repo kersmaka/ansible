@@ -9,6 +9,14 @@
     - preflight
     - always
 
+- name: Import Puppet 8 GPG key
+  ansible.builtin.rpm_key:
+    key: "{{ puppet_gpg_key }}"
+    state: present
+  tags:
+    - puppet
+    - repos
+
 - name: Install Puppet 8 release RPM
   ansible.builtin.dnf:
     name: "{{ puppet_release_rpm }}"
@@ -16,6 +24,14 @@
     disable_gpg_check: false
   tags:
     - puppet
+    - repos
+
+- name: Import Foreman 3.17 GPG key
+  ansible.builtin.rpm_key:
+    key: "{{ foreman_gpg_key }}"
+    state: present
+  tags:
+    - foreman
     - repos
 
 - name: Install Foreman 3.17 release RPM
