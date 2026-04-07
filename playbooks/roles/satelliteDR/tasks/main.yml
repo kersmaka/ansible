@@ -78,6 +78,15 @@
     - foreman
     - install    
 
+- name: Ensure rsync is installed on kvm_host
+  ansible.builtin.dnf:
+    name: rsync
+    state: present
+  delegate_to: kvm_host
+  tags:
+    - foreman
+    - restore
+
 - name: Copy Katello backup from homelab to foreman VM
   ansible.builtin.synchronize:
     src: "/home/temp/{{ katello_backup_file }}"
