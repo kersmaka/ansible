@@ -1,4 +1,4 @@
-
+---
 - name: Verify OS is RHEL/Rocky/AlmaLinux 9
   ansible.builtin.assert:
     that:
@@ -8,6 +8,7 @@
   tags:
     - preflight
     - always
+
 - name: Install Puppet 8 release RPM
   ansible.builtin.dnf:
     name: "{{ puppet_release_rpm }}"
@@ -16,6 +17,7 @@
   tags:
     - puppet
     - repos
+
 - name: Install Foreman 3.17 release RPM
   ansible.builtin.dnf:
     name: "{{ foreman_release_rpm }}"
@@ -24,6 +26,7 @@
   tags:
     - foreman
     - repos
+
 - name: Install foreman-installer
   ansible.builtin.dnf:
     name: "{{ foreman_installer_package }}"
@@ -32,17 +35,3 @@
     - foreman
     - install
   notify: Confirm foreman-installer version
-
-  handlers:
-
-    - name: Confirm foreman-installer version
-      ansible.builtin.command:
-        cmd: foreman-installer --version
-      register: fi_version
-      changed_when: false
-      listen: Confirm foreman-installer version
-
-    - name: Print foreman-installer version
-      ansible.builtin.debug:
-        msg: "foreman-installer installed: {{ fi_version.stdout }}"
-      listen: Confirm foreman-installer version

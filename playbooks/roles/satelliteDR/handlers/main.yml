@@ -1,2 +1,12 @@
 ---
-# handlers file for buildPodman
+- name: Confirm foreman-installer version
+  ansible.builtin.command:
+    cmd: foreman-installer --version
+  register: fi_version
+  changed_when: false
+  listen: Confirm foreman-installer version
+
+- name: Print foreman-installer version
+  ansible.builtin.debug:
+    msg: "foreman-installer installed: {{ fi_version.stdout }}"
+  listen: Confirm foreman-installer version
