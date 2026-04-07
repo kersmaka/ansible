@@ -83,7 +83,7 @@
     src: "/home/temp/{{ katello_backup_file }}"
     dest: "/tmp/{{ katello_backup_file }}"
     mode: push
-  delegate_to: homelab
+  delegate_to: kvm_host
   tags:
     - foreman
     - restore
