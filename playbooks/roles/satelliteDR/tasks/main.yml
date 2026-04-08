@@ -105,10 +105,21 @@
   tags:
     - foreman
     - install
-    
+
 - name: Set hostname to foreman.homelab.com
   ansible.builtin.hostname:
     name: foreman.homelab.com
   tags:
     - preflight
     - networking    
+
+- name: Enable Satellite repositories via subscription-manager
+  ansible.builtin.command:
+    cmd: >
+      subscription-manager repos
+      --enable=satellite-6.16-for-rhel-9-x86_64-rpms
+      --enable=satellite-maintenance-6.16-for-rhel-9-x86_64-rpms
+      --enable=satellite-client-6-for-rhel-9-x86_64-rpms
+  tags:
+    - foreman
+    - repos    
