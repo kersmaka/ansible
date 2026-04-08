@@ -98,6 +98,15 @@
     - foreman
     - restore
 
+- name: Extract Katello backup archive to /home/temp
+  ansible.builtin.unarchive:
+    src: /tmp/katello-backup-2026-04-06.tar.gz
+    dest: /home/temp/
+    remote_src: yes
+  tags:
+    - foreman
+    - restore    
+
 - name: Install rubygem-foreman_maintain
   ansible.builtin.dnf:
     name: rubygem-foreman_maintain
