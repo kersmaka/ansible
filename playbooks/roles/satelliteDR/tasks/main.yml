@@ -98,6 +98,15 @@
     - foreman
     - restore
 
+- name: Ensure /home/temp directory exists
+  ansible.builtin.file:
+    path: /home/temp
+    state: directory
+    mode: '0755'
+  tags:
+    - foreman
+    - restore    
+
 - name: Extract Katello backup archive to /home/temp
   ansible.builtin.unarchive:
     src: /tmp/katello-backup-2026-04-06.tar.gz
