@@ -97,3 +97,18 @@
   tags:
     - foreman
     - restore
+
+- name: Install rubygem-foreman_maintain
+  ansible.builtin.dnf:
+    name: rubygem-foreman_maintain
+    state: present
+  tags:
+    - foreman
+    - install
+    
+- name: Set hostname to foreman.homelab.com
+  ansible.builtin.hostname:
+    name: foreman.homelab.com
+  tags:
+    - preflight
+    - networking    
