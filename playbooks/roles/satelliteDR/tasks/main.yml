@@ -87,11 +87,12 @@
     - foreman
     - restore
 
-- name: Copy Katello backup from homelab to foreman VM
+- name: Copy Katello backup from kvm_host to foreman VM
   ansible.builtin.synchronize:
     src: "/home/temp/{{ katello_backup_file }}"
     dest: "/tmp/{{ katello_backup_file }}"
     mode: push
+    dest_port: 22
   delegate_to: kvm_host
   tags:
     - foreman
