@@ -123,7 +123,7 @@
 - name: Restore Katello backup via foreman-maintain
   ansible.builtin.command:
     cmd: >-
-      foreman-maintain restore /tmp/katello/{{ katello_backup_dir }}
+      foreman-maintain restore /home/temp/{{ katello_backup_dir }}
       --assumeyes
       --whitelist=restore-validate-hostname,restore-validate-backup,restore-validate-interfaces,restore-installer-reset,installer-run
   tags:
