@@ -202,6 +202,7 @@
       foreman-installer 
       --foreman-proxy-dhcp-interface={{ ansible_default_ipv4.interface }}
       --foreman-proxy-dns-interface={{ ansible_default_ipv4.interface }}
+      --foreman-proxy-content-enable-python false
   register: foreman_installer_result
   # Sometimes the first run after a restore fixes dependencies but exits with a minor error; 
   # however, here we want to ensure it succeeds.
