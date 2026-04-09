@@ -160,19 +160,24 @@
     - foreman
     - restore
 
-- name: Fix DHCP interface name in foreman-installer answers
+- name: Fix interface names in foreman-installer answers
   ansible.builtin.replace:
     path: /etc/foreman-installer/scenarios.d/katello-answers.yaml
-    regexp: 'dhcp_interface:.*'
-    replace: "dhcp_interface: {{ ansible_default_ipv4.interface }}"
+    # This regex looks for common interface-related keys
+    regexp: '(interface|dns_interface|dhcp_interface):.*'
+    replace: '\1: {{ ansible_default_ipv4.interface }}'
   tags:
     - foreman
     - restore
 
 - name: Run foreman-installer post-restore
   ansible.builtin.command:
-    cmd: foreman-installer
-    creates: /etc/foreman/installer.log  # or any file that only exists post-restore
+    # Use --foreman-proxy-dhcp-interface and --foreman-proxy-dns-interface 
+    # as explicit flags to override any lingering hardcoded values
+    cmd: >-
+      foreman-installer 
+      --foreman-proxy-dhcp-interface={{ ansible_default_ipv4.interface }}
+      --foreman-proxy-dns-interface={{ ansible_default_ipv4.interface }}
   register: foreman_installer_result
   failed_when: foreman_installer_result.rc != 0
   tags:
