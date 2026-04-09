@@ -144,10 +144,10 @@
 
 - name: Restore Katello backup via foreman-maintain
   ansible.builtin.command:
-    cmd: >
+    cmd: >-
       foreman-maintain restore /home/temp/katello-backup-2026-04-06-14-03-53
       --assumeyes
-      --whitelist=pulpcore-db-up,restore-foreman-dump,restore-installer-reset, restore-validate-hostname,restore-validate-backup,restore-validate-interfaces, restore-drop-databases,candlepin-db-up,foreman-db-up
+      --whitelist=pulpcore-db-up,restore-foreman-dump,restore-installer-reset,restore-validate-hostname,restore-validate-backup,restore-validate-interfaces,restore-drop-databases,candlepin-db-up,foreman-db-up
   tags:
     - foreman
     - restore
