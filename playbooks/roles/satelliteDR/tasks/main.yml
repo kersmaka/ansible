@@ -142,7 +142,7 @@
 - name: Restore Katello backup via foreman-maintain (skip installer)
   ansible.builtin.command:
     cmd: >-
-      foreman-maintain restore /home/temp/{{ katello_backup_file | regex_replace('\.tar\.gz$', '') }}
+      foreman-maintain restore /home/temp/{{ katello_backup_dir }}
       --assumeyes
       --whitelist=pulpcore-db-up,restore-installer-reset,restore-validate-hostname,restore-validate-backup,restore-validate-interfaces,restore-drop-databases,candlepin-db-up,foreman-db-up,installer-run
   tags:
