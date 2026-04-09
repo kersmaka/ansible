@@ -196,6 +196,21 @@
     - foreman
     - restore
 
+- name: Reset database permissions for Foreman and Candlepin
+  ansible.builtin.shell: |
+    foreman-rake db:migrate
+    foreman-rake db:seed
+  ignore_errors: yes
+  tags:
+    - foreman
+    - restore
+
+- name: Restart services to clear stale API connections
+  ansible.builtin.command: foreman-maintain service restart
+  tags:
+    - foreman
+    - restore
+
 - name: Run foreman-installer post-restore
   ansible.builtin.command:
     cmd: >-
@@ -203,9 +218,8 @@
       --foreman-proxy-dhcp-interface={{ ansible_default_ipv4.interface }}
       --foreman-proxy-dns-interface={{ ansible_default_ipv4.interface }}
       --foreman-proxy-content-enable-python false
+      --wait-for-ready=600
   register: foreman_installer_result
-  # Sometimes the first run after a restore fixes dependencies but exits with a minor error; 
-  # however, here we want to ensure it succeeds.
   failed_when: foreman_installer_result.rc != 0
   tags:
     - foreman
