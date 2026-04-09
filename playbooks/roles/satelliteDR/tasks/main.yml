@@ -169,6 +169,24 @@
     - foreman
     - restore
 
+- name: Pre-install pulpcore python plugin to bypass installer dependency failure
+  ansible.builtin.dnf:
+    name: "python3-pulp-python" # This is often the actual RPM name providing the plugin
+    state: present
+  ignore_errors: yes
+  tags:
+    - foreman
+    - restore
+
+- name: Force install pulpcore-plugin(python) if virtual provide fails
+  ansible.builtin.shell: |
+    dnf install -y 'pulpcore-plugin(python)' || dnf install -y python3-pulp-python
+  register: dnf_fix
+  failed_when: false
+  tags:
+    - foreman
+    - restore
+
 - name: Fix interface names in foreman-installer answers
   ansible.builtin.replace:
     path: /etc/foreman-installer/scenarios.d/katello-answers.yaml
