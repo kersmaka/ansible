@@ -139,6 +139,20 @@
     - foreman
     - repos
 
+- name: Stop Foreman services to release database locks
+  ansible.builtin.command: foreman-maintain service stop
+  tags:
+    - foreman
+    - restore
+
+- name: Ensure PostgreSQL is running so we can drop databases
+  ansible.builtin.systemd:
+    name: postgresql
+    state: started
+  tags:
+    - foreman
+    - restore
+
 - name: Drop existing databases to ensure clean restore
   ansible.builtin.shell: |
     sudo -u postgres dropdb {{ item }} || true
@@ -155,7 +169,7 @@
     cmd: >-
       foreman-maintain restore /home/temp/{{ katello_backup_dir }}
       --assumeyes
-      --whitelist=restore-candlepin-dump,restore-foreman-dump,restore-drop-databases,pulpcore-db-up,restore-installer-reset,restore-validate-hostname,restore-validate-backup,restore-validate-interfaces,candlepin-db-up,foreman-db-up,installer-run
+      --whitelist=restore-pulpcore-dump,restore-candlepin-dump,restore-foreman-dump,restore-drop-databases,pulpcore-db-up,restore-installer-reset,restore-validate-hostname,restore-validate-backup,restore-validate-interfaces,candlepin-db-up,foreman-db-up,installer-run
   tags:
     - foreman
     - restore
