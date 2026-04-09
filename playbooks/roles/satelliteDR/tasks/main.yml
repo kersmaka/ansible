@@ -155,12 +155,10 @@
     cmd: >-
       foreman-maintain restore /home/temp/{{ katello_backup_dir }}
       --assumeyes
-      --whitelist=pulpcore-db-up,restore-installer-reset,restore-validate-hostname,restore-validate-backup,restore-validate-interfaces,candlepin-db-up,foreman-db-up,installer-run
-  # Note: removed restore-drop-databases and restore-candlepin-dump from whitelist 
-  # so foreman-maintain can handle the recreation itself now that they are gone.
+      --whitelist=restore-drop-databases,pulpcore-db-up,restore-installer-reset,restore-validate-hostname,restore-validate-backup,restore-validate-interfaces,candlepin-db-up,foreman-db-up,installer-run
   tags:
     - foreman
-    - restore    
+    - restore
 
 - name: Fix DHCP interface name in foreman-installer answers
   ansible.builtin.replace:
