@@ -9,126 +9,89 @@
     - preflight
     - always
 
-- name: Import Puppet 8 GPG key
+- name: Import GPG keys for Puppet and Foreman
   ansible.builtin.rpm_key:
-    key: "{{ puppet_gpg_key }}"
+    key: "{{ item }}"
     state: present
+  loop:
+    - "{{ puppet_gpg_key }}"
+    - "{{ foreman_gpg_key }}"
   tags:
-    - puppet
     - repos
 
-- name: Install Puppet 8 release RPM
+- name: Install Puppet and Foreman release RPMs
   ansible.builtin.dnf:
-    name: "{{ puppet_release_rpm }}"
+    name:
+      - "{{ puppet_release_rpm }}"
+      - "{{ foreman_release_rpm }}"
     state: present
     disable_gpg_check: false
   tags:
-    - puppet
     - repos
 
-- name: Import Foreman 3.17 GPG key
-  ansible.builtin.rpm_key:
-    key: "{{ foreman_gpg_key }}"
-    state: present
-  tags:
-    - foreman
-    - repos
-
-- name: Install Foreman 3.17 release RPM
+- name: Install foreman-installer and maintenance tools
   ansible.builtin.dnf:
-    name: "{{ foreman_release_rpm }}"
-    state: present
-    disable_gpg_check: false
-  tags:
-    - foreman
-    - repos
-
-- name: Install foreman-installer
-  ansible.builtin.dnf:
-    name: "{{ foreman_installer_package }}"
-    state: present
-  tags:
-    - foreman
-    - install
-  notify: Confirm foreman-installer version
-
-- name: Get primary IPv4 address
-  ansible.builtin.set_fact:
-    foreman_ip: "{{ ansible_default_ipv4.address }}"
-  tags:
-    - preflight
-    - networking
-
-- name: Ensure foreman.homelab.com is in /etc/hosts
-  ansible.builtin.lineinfile:
-    path: /etc/hosts
-    regexp: '.*foreman\.homelab\.com.*'
-    line: "{{ foreman_ip }}\tforeman.homelab.com foreman"
-    state: present
-    backup: yes
-  tags:
-    - preflight
-    - networking
-
-- name: Run foreman-installer
-  ansible.builtin.command:
-    cmd: foreman-installer
-    creates: /etc/foreman/settings.yaml
-  tags:
-    - foreman
-    - install    
-
-- name: Ensure rsync is installed on kvm_host
-  ansible.builtin.package:
-    name: rsync
-    state: present
-  delegate_to: kvm_host
-  tags:
-    - foreman
-    - restore
-
-- name: Copy Katello backup from kvm_host to foreman VM
-  ansible.builtin.synchronize:
-    src: "/home/temp/{{ katello_backup_file }}"
-    dest: "/tmp/{{ katello_backup_file }}"
-    mode: push
-    dest_port: 22
-  delegate_to: kvm_host
-  tags:
-    - foreman
-    - restore
-
-- name: Ensure /home/temp directory exists
-  ansible.builtin.file:
-    path: /home/temp
-    state: directory
-    mode: '0755'
-  tags:
-    - foreman
-    - restore    
-
-- name: Extract Katello backup archive to /home/temp
-  ansible.builtin.unarchive:
-    src: "/tmp/{{ katello_backup_file }}"
-    dest: /home/temp/
-    remote_src: yes 
-
-- name: Install rubygem-foreman_maintain
-  ansible.builtin.dnf:
-    name: rubygem-foreman_maintain
+    name:
+      - "{{ foreman_installer_package }}"
+      - rubygem-foreman_maintain
     state: present
   tags:
     - foreman
     - install
 
-- name: Set hostname to foreman.homelab.com
-  ansible.builtin.hostname:
-    name: foreman.homelab.com
+- name: Configure networking and hostname
+  block:
+    - name: Get primary IPv4 address
+      ansible.builtin.set_fact:
+        foreman_ip: "{{ ansible_default_ipv4.address }}"
+
+    - name: Ensure foreman.homelab.com is in /etc/hosts
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        regexp: '.*foreman\.homelab\.com.*'
+        line: "{{ foreman_ip }}\tforeman.homelab.com foreman"
+        state: present
+        backup: yes
+
+    - name: Set hostname to foreman.homelab.com
+      ansible.builtin.hostname:
+        name: foreman.homelab.com
   tags:
     - preflight
-    - networking    
+    - networking
 
-- name: Enable Satellite repositories via subscription-manager
+- name: Handle Katello backup archive
+  block:
+    - name: Ensure rsync is installed on kvm_host
+      ansible.builtin.package:
+        name: rsync
+        state: present
+      delegate_to: kvm_host
+
+    - name: Copy Katello backup from kvm_host
+      ansible.builtin.synchronize:
+        src: "/home/temp/{{ katello_backup_file }}"
+        dest: "/tmp/{{ katello_backup_file }}"
+        mode: push
+        dest_port: 22
+      delegate_to: kvm_host
+
+    - name: Extract Katello backup archive
+      ansible.builtin.file:
+        path: /home/temp
+        state: directory
+        mode: '0755'
+
+    - name: Extract archive to /home/temp
+      ansible.builtin.unarchive:
+        src: "/tmp/{{ katello_backup_file }}"
+        dest: /home/temp/
+        remote_src: yes
+  tags:
+    - foreman
+    - restore
+
+- name: Enable Satellite repositories
   ansible.builtin.command:
     cmd: >-
       subscription-manager repos
@@ -139,27 +102,25 @@
     - foreman
     - repos
 
-- name: Stop Foreman services to release database locks
-  ansible.builtin.command: foreman-maintain service stop
-  tags:
-    - foreman
-    - restore
+- name: Prepare clean state for restore
+  block:
+    - name: Stop all Foreman services to release DB locks
+      ansible.builtin.command: foreman-maintain service stop
 
-- name: Ensure PostgreSQL is running so we can drop databases
-  ansible.builtin.systemd:
-    name: postgresql
-    state: started
-  tags:
-    - foreman
-    - restore
+    - name: Start PostgreSQL only for database maintenance
+      ansible.builtin.systemd:
+        name: postgresql
+        state: started
 
-- name: Drop existing databases to ensure clean restore
-  ansible.builtin.shell: |
-    sudo -u postgres dropdb {{ item }} || true
-  loop:
-    - candlepin
-    - foreman
-    - pulpcore
+    - name: Drop existing databases
+      ansible.builtin.shell: |
+        sudo -u postgres dropdb {{ db_name }} || true
+      loop:
+        - candlepin
+        - foreman
+        - pulpcore
+      loop_control:
+        loop_var: db_name
   tags:
     - foreman
     - restore
@@ -174,77 +135,52 @@
     - foreman
     - restore
 
-- name: Clean DNF metadata and refresh subscriptions
-  ansible.builtin.shell: |
-    subscription-manager refresh
-    dnf clean all
-    dnf makecache
+- name: Post-restore environment cleanup
+  block:
+    - name: Refresh subscriptions and DNF metadata
+      ansible.builtin.shell: |
+        subscription-manager refresh
+        dnf clean all
+        dnf makecache
+
+    - name: Ensure pulpcore-plugin(python) dependencies are met
+      ansible.builtin.shell: |
+        dnf install -y 'pulpcore-plugin(python)' || dnf install -y python3-pulp-python
+      register: dnf_fix
+      failed_when: false
+
+    - name: Update interface names in installer answers
+      ansible.builtin.replace:
+        path: /etc/foreman-installer/scenarios.d/katello-answers.yaml
+        regexp: '(interface|dns_interface|dhcp_interface):.*'
+        replace: '\1: {{ ansible_default_ipv4.interface }}'
   tags:
     - foreman
     - restore
 
-- name: Pre-install pulpcore python plugin to bypass installer dependency failure
-  ansible.builtin.dnf:
-    name: "python3-pulp-python" # This is often the actual RPM name providing the plugin
-    state: present
-  ignore_errors: yes
-  tags:
-    - foreman
-    - restore
+- name: Finalize restore and reconcile configuration
+  block:
+    - name: Ensure PostgreSQL is running for rake tasks
+      ansible.builtin.systemd:
+        name: postgresql
+        state: started
 
-- name: Force install pulpcore-plugin(python) if virtual provide fails
-  ansible.builtin.shell: |
-    dnf install -y 'pulpcore-plugin(python)' || dnf install -y python3-pulp-python
-  register: dnf_fix
-  failed_when: false
-  tags:
-    - foreman
-    - restore
+    - name: Run database migrations and seeds
+      ansible.builtin.shell: |
+        foreman-rake db:migrate
+        foreman-rake db:seed
+        foreman-rake apipie:cache:index
+      ignore_errors: yes
 
-- name: Fix interface names in foreman-installer answers
-  ansible.builtin.replace:
-    path: /etc/foreman-installer/scenarios.d/katello-answers.yaml
-    regexp: '(interface|dns_interface|dhcp_interface):.*'
-    replace: '\1: {{ ansible_default_ipv4.interface }}'
-  tags:
-    - foreman
-    - restore
-
-- name: Start PostgreSQL database before running rake tasks
-  ansible.builtin.systemd:
-    name: postgresql
-    state: started
-  tags:
-    - foreman
-    - restore
-
-- name: Reset database permissions and seeds
-  ansible.builtin.shell: |
-    foreman-rake db:migrate
-    foreman-rake db:seed
-    foreman-rake apipie:cache:index
-  ignore_errors: yes
-  tags:
-    - foreman
-    - restore
-
-- name: Restart services to clear stale API connections
-  ansible.builtin.command: foreman-maintain service restart
-  ignore_errors: yes # Ignored because some components may naturally fail until the installer reconciles them
-  tags:
-    - foreman
-    - restore
-
-- name: Run foreman-installer post-restore
-  ansible.builtin.command:
-    cmd: >-
-      foreman-installer 
-      --foreman-proxy-dhcp-interface={{ ansible_default_ipv4.interface }}
-      --foreman-proxy-dns-interface={{ ansible_default_ipv4.interface }}
-      --foreman-proxy-content-enable-python=false
-      --foreman-proxy-register-in-foreman=false
-  register: foreman_installer_result
-  failed_when: foreman_installer_result.rc != 0
+    - name: Run foreman-installer to reconcile
+      ansible.builtin.command:
+        cmd: >-
+          foreman-installer 
+          --foreman-proxy-dhcp-interface={{ ansible_default_ipv4.interface }}
+          --foreman-proxy-dns-interface={{ ansible_default_ipv4.interface }}
+          --foreman-proxy-content-enable-python=false
+          --foreman-proxy-register-in-foreman=false
+      register: foreman_installer_result
   tags:
     - foreman
     - restore
