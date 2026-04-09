@@ -158,22 +158,55 @@
         name: postgresql
         state: started
 
-    - name: Run database migrations and seeds
-      ansible.builtin.shell: |
-        foreman-rake db:migrate
-        foreman-rake db:seed
-        foreman-rake apipie:cache:index
-      ignore_errors: yes
+    # FIX: Split rake tasks so failures are visible instead of silently ignored
+    - name: Run database migrations
+      ansible.builtin.command: foreman-rake db:migrate
+      register: db_migrate_result
+      failed_when: db_migrate_result.rc != 0
 
+    - name: Run database seeds
+      ansible.builtin.command: foreman-rake db:seed
+      register: db_seed_result
+      failed_when: db_seed_result.rc != 0
+
+    - name: Rebuild apipie cache
+      ansible.builtin.command: foreman-rake apipie:cache:index
+      ignore_errors: yes  # non-critical, safe to ignore
+
+    # FIX: Verify the foreman database actually exists before running the installer
+    - name: Verify foreman database exists before running installer
+      ansible.builtin.shell: |
+        sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw foreman
+      register: db_check
+      failed_when: db_check.rc != 0
+      changed_when: false
+
+    # FIX: Added --skip-checks-i-know-better to suppress the DB warning and
+    #      prevent the Foreman::Register Puppet resource from attempting API
+    #      calls against a not-yet-healthy Foreman instance
     - name: Run foreman-installer to reconcile configuration
       ansible.builtin.command:
         cmd: >-
-          foreman-installer 
+          foreman-installer
           --foreman-proxy-dhcp-interface={{ ansible_default_ipv4.interface }}
           --foreman-proxy-dns-interface={{ ansible_default_ipv4.interface }}
           --foreman-proxy-content-enable-python=false
           --foreman-proxy-register-in-foreman=false
+          --skip-checks-i-know-better
       register: foreman_installer_result
       failed_when: foreman_installer_result.rc != 0
+
+    # FIX: Wait for the Foreman API to be healthy before declaring success,
+    #      catching the 500 error that caused the original failure
+    - name: Wait for Foreman API to become healthy
+      ansible.builtin.uri:
+        url: "https://foreman.homelab.com/api/v2/hosts"
+        method: GET
+        validate_certs: no
+        status_code: 200
+      register: api_check
+      retries: 10
+      delay: 30
+      until: api_check.status == 200
   tags:
     - restore
