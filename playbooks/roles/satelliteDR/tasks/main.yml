@@ -155,7 +155,7 @@
     cmd: >-
       foreman-maintain restore /home/temp/{{ katello_backup_dir }}
       --assumeyes
-      --whitelist=restore-foreman-dump,restore-drop-databases,pulpcore-db-up,restore-installer-reset,restore-validate-hostname,restore-validate-backup,restore-validate-interfaces,candlepin-db-up,foreman-db-up,installer-run
+      --whitelist=restore-candlepin-dump,restore-foreman-dump,restore-drop-databases,pulpcore-db-up,restore-installer-reset,restore-validate-hostname,restore-validate-backup,restore-validate-interfaces,candlepin-db-up,foreman-db-up,installer-run
   tags:
     - foreman
     - restore
