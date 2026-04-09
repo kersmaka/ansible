@@ -158,6 +158,16 @@
         name: postgresql
         state: started
 
+    # FIX: Clean up orphaned FK records left by online backup inconsistency
+    - name: Clean up orphaned katello_content_view_environment_content_facets records
+      ansible.builtin.shell: |
+        sudo -u postgres psql -d foreman -c "
+          DELETE FROM katello_content_view_environment_content_facets
+          WHERE content_facet_id NOT IN (SELECT id FROM katello_content_facets);
+        "
+      register: fk_cleanup
+      changed_when: "'DELETE' in fk_cleanup.stdout"
+
     # FIX: Split rake tasks so failures are visible instead of silently ignored
     - name: Run database migrations
       ansible.builtin.command: foreman-rake db:migrate
