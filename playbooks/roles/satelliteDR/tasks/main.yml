@@ -160,10 +160,18 @@
     - foreman
     - restore
 
+- name: Clean DNF metadata and refresh subscriptions
+  ansible.builtin.shell: |
+    subscription-manager refresh
+    dnf clean all
+    dnf makecache
+  tags:
+    - foreman
+    - restore
+
 - name: Fix interface names in foreman-installer answers
   ansible.builtin.replace:
     path: /etc/foreman-installer/scenarios.d/katello-answers.yaml
-    # This regex looks for common interface-related keys
     regexp: '(interface|dns_interface|dhcp_interface):.*'
     replace: '\1: {{ ansible_default_ipv4.interface }}'
   tags:
@@ -172,13 +180,13 @@
 
 - name: Run foreman-installer post-restore
   ansible.builtin.command:
-    # Use --foreman-proxy-dhcp-interface and --foreman-proxy-dns-interface 
-    # as explicit flags to override any lingering hardcoded values
     cmd: >-
       foreman-installer 
       --foreman-proxy-dhcp-interface={{ ansible_default_ipv4.interface }}
       --foreman-proxy-dns-interface={{ ansible_default_ipv4.interface }}
   register: foreman_installer_result
+  # Sometimes the first run after a restore fixes dependencies but exits with a minor error; 
+  # however, here we want to ensure it succeeds.
   failed_when: foreman_installer_result.rc != 0
   tags:
     - foreman
