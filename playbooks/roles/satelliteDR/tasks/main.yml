@@ -196,10 +196,19 @@
     - foreman
     - restore
 
-- name: Reset database permissions for Foreman and Candlepin
+- name: Start PostgreSQL database before running rake tasks
+  ansible.builtin.systemd:
+    name: postgresql
+    state: started
+  tags:
+    - foreman
+    - restore
+
+- name: Reset database permissions and seeds
   ansible.builtin.shell: |
     foreman-rake db:migrate
     foreman-rake db:seed
+    foreman-rake apipie:cache:index
   ignore_errors: yes
   tags:
     - foreman
@@ -207,6 +216,7 @@
 
 - name: Restart services to clear stale API connections
   ansible.builtin.command: foreman-maintain service restart
+  ignore_errors: yes # Ignored because some components may naturally fail until the installer reconciles them
   tags:
     - foreman
     - restore
@@ -217,8 +227,8 @@
       foreman-installer 
       --foreman-proxy-dhcp-interface={{ ansible_default_ipv4.interface }}
       --foreman-proxy-dns-interface={{ ansible_default_ipv4.interface }}
-      --foreman-proxy-content-enable-python false
-      --wait-for-ready=600
+      --foreman-proxy-content-enable-python=false
+      --foreman-proxy-register-in-foreman=false
   register: foreman_installer_result
   failed_when: foreman_installer_result.rc != 0
   tags:
