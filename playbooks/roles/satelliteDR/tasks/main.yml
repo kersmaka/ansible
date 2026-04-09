@@ -161,6 +161,7 @@
 - name: Run foreman-installer post-restore
   ansible.builtin.command:
     cmd: foreman-installer
+    creates: /etc/foreman/installer.log  # or any file that only exists post-restore
   register: foreman_installer_result
   failed_when: foreman_installer_result.rc != 0
   tags:
