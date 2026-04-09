@@ -137,7 +137,17 @@
       --enable=satellite-client-6-for-rhel-9-x86_64-rpms
   tags:
     - foreman
-    - repos    
+    - repos
+
+- name: Restore Katello backup via foreman-maintain (skip installer)
+  ansible.builtin.command:
+    cmd: >-
+      foreman-maintain restore /home/temp/{{ katello_backup_file | regex_replace('\.tar\.gz$', '') }}
+      --assumeyes
+      --whitelist=pulpcore-db-up,restore-installer-reset,restore-validate-hostname,restore-validate-backup,restore-validate-interfaces,restore-drop-databases,candlepin-db-up,foreman-db-up,installer-run
+  tags:
+    - foreman
+    - restore
 
 - name: Fix DHCP interface name in foreman-installer answers
   ansible.builtin.replace:
@@ -148,12 +158,11 @@
     - foreman
     - restore
 
-- name: Restore Katello backup via foreman-maintain
+- name: Run foreman-installer post-restore
   ansible.builtin.command:
-    cmd: >-
-      foreman-maintain restore /home/temp/{{ katello_backup_file | regex_replace('\.tar\.gz$', '') }}
-      --assumeyes
-      --whitelist=pulpcore-db-up,restore-installer-reset,restore-validate-hostname,restore-validate-backup,restore-validate-interfaces,restore-drop-databases,candlepin-db-up,foreman-db-up
+    cmd: foreman-installer
+  register: foreman_installer_result
+  failed_when: foreman_installer_result.rc != 0
   tags:
     - foreman
     - restore
