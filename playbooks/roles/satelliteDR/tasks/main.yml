@@ -139,15 +139,28 @@
     - foreman
     - repos
 
-- name: Restore Katello backup via foreman-maintain (skip installer)
+- name: Drop existing databases to ensure clean restore
+  ansible.builtin.shell: |
+    sudo -u postgres dropdb {{ item }} || true
+  loop:
+    - candlepin
+    - foreman
+    - pulpcore
+  tags:
+    - foreman
+    - restore
+
+- name: Restore Katello backup via foreman-maintain
   ansible.builtin.command:
     cmd: >-
       foreman-maintain restore /home/temp/{{ katello_backup_dir }}
       --assumeyes
-      --whitelist=restore-candlepin-dump,pulpcore-db-up,restore-drop-databases,restore-installer-reset,restore-validate-hostname,restore-validate-backup,restore-validate-interfaces,candlepin-db-up,foreman-db-up,installer-run
+      --whitelist=pulpcore-db-up,restore-installer-reset,restore-validate-hostname,restore-validate-backup,restore-validate-interfaces,candlepin-db-up,foreman-db-up,installer-run
+  # Note: removed restore-drop-databases and restore-candlepin-dump from whitelist 
+  # so foreman-maintain can handle the recreation itself now that they are gone.
   tags:
     - foreman
-    - restore
+    - restore    
 
 - name: Fix DHCP interface name in foreman-installer answers
   ansible.builtin.replace:
