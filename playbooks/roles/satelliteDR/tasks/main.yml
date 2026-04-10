@@ -105,6 +105,9 @@
     cmd: >-
       foreman-maintain restore /home/temp/{{ katello_backup_dir }}
       --assumeyes
+      --whitelist=restore-validate-backup
+  tags:
+    - restore
 
 # FIX: foreman-maintain stops PostgreSQL at the end of its restore sequence.
 #      We must restart it before running pg_restore manually.
