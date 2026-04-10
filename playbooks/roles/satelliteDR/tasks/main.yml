@@ -158,33 +158,10 @@
         name: postgresql
         state: started
 
-    # FIX: foreman-maintain skips foreman dump (whitelist) so we restore it
-    #      ourselves here after it has finished. We strip the corrupt FK line
-    #      from the dump first so pg_restore completes cleanly.
-    - name: Drop foreman database before manual restore
-      ansible.builtin.shell: |
-        sudo -u postgres dropdb foreman || true
-
-    - name: Extract foreman dump to SQL file
-      ansible.builtin.shell: |
-        sudo -u postgres pg_restore \
-          --file=/tmp/foreman_restore.sql \
-          /home/temp/{{ katello_backup_dir }}/foreman.dump
-      failed_when: false
-
-    - name: Remove corrupt FK constraint line from SQL dump
-      ansible.builtin.lineinfile:
-        path: /tmp/foreman_restore.sql
-        regexp: '.*fk_rails_08d19b0160.*'
-        state: absent
-
-    - name: Restore cleaned foreman SQL into postgres
-      ansible.builtin.shell: |
-        sudo -u postgres psql -d postgres -f /tmp/foreman_restore.sql
-      register: foreman_sql_restore
-      failed_when: foreman_sql_restore.rc != 0
-
     # FIX: Clean up orphaned FK record left by online backup inconsistency
+    #      foreman-maintain restores the foreman dump but exits non-zero due to
+    #      a single FK violation from the online backup race condition. The data
+    #      IS restored. We just need to clean up the orphaned row.
     - name: Clean up orphaned katello_content_view_environment_content_facets records
       ansible.builtin.shell: |
         sudo -u postgres psql -d foreman -c "
