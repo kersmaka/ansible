@@ -90,28 +90,6 @@
   tags:
     - restore
 
-- name: Prepare database for restore
-  block:
-    - name: Stop all services to release database locks
-      ansible.builtin.command: foreman-maintain service stop
-
-    - name: Start PostgreSQL only for maintenance
-      ansible.builtin.systemd:
-        name: postgresql
-        state: started
-
-    - name: Drop existing databases to ensure clean restore
-      ansible.builtin.shell: |
-        sudo -u postgres dropdb {{ db_name }} || true
-      loop:
-        - candlepin
-        - foreman
-        - pulpcore
-      loop_control:
-        loop_var: db_name
-  tags:
-    - restore
-
 # NOTE on restore-foreman-dump whitelist behavior (learned across runs 49-52):
 #
 #   Whitelisting restore-foreman-dump causes foreman-maintain to SKIP that step
@@ -127,8 +105,6 @@
     cmd: >-
       foreman-maintain restore /home/temp/{{ katello_backup_dir }}
       --assumeyes
-      --whitelist=candlepin-db-up,foreman-db-up,pulpcore-db-up,restore-drop-databases,restore-foreman-dump,restore-validate-hostname,restore-validate-backup,restore-validate-interfaces,restore-installer-reset,installer-run
-  tags:
     - restore
 
 # FIX: foreman-maintain stops PostgreSQL at the end of its restore sequence.
