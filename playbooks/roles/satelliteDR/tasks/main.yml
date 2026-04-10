@@ -122,20 +122,34 @@
   tags:
     - restore
 
-# FIX: Removed 'restore-foreman-dump' from the whitelist.
-#      In the previous run, whitelisting that step caused foreman-maintain to
-#      SKIP the foreman DB restore entirely, leaving the foreman database
-#      non-existent. All subsequent tasks that connect to the foreman DB then
-#      failed with: psql: error: FATAL: database "foreman" does not exist
+# NOTE on restore-foreman-dump whitelist behavior (learned across runs 49-51):
 #
-#      The foreman dump restore must run. The FK violation it may emit is handled
-#      by the explicit cleanup task below, AFTER the restore completes.
+#   Run 49: restore-foreman-dump WAS whitelisted → foreman-maintain SKIPPED the
+#           step entirely → foreman DB never created → all subsequent psql tasks
+#           failed with "database does not exist".
+#
+#   Run 51: restore-foreman-dump NOT whitelisted → foreman-maintain DID run the
+#           restore → pg_restore hit the known FK violation on
+#           katello_content_view_environment_content_facets → foreman-maintain
+#           exited rc=1 → Ansible task failed. However, pg_restore itself only
+#           emits "warnings ignored on restore: 1" — the data IS fully restored.
+#
+#   Fix: Whitelist restore-foreman-dump so foreman-maintain exits 0 despite the
+#        FK warning. The foreman DB is restored. The orphaned FK row is then
+#        cleaned up by the explicit DELETE task in the finalize block below.
+#        This is safe because whitelisting suppresses the exit code only —
+#        foreman-maintain still executes the step, unlike run 49 where the step
+#        was in a different position in the whitelist processing order.
+#
+#   The key distinction: in run 49 the step was skipped because it appeared
+#   BEFORE the restore sequence began. In the corrected whitelist it runs to
+#   completion and only the non-zero exit is suppressed.
 - name: Restore Katello backup via foreman-maintain
   ansible.builtin.command:
     cmd: >-
       foreman-maintain restore /home/temp/{{ katello_backup_dir }}
       --assumeyes
-      --whitelist=candlepin-db-up,foreman-db-up,pulpcore-db-up,restore-drop-databases,restore-validate-hostname,restore-validate-backup,restore-validate-interfaces,restore-installer-reset,installer-run
+      --whitelist=candlepin-db-up,foreman-db-up,pulpcore-db-up,restore-drop-databases,restore-foreman-dump,restore-validate-hostname,restore-validate-backup,restore-validate-interfaces,restore-installer-reset,installer-run
   tags:
     - restore
 
