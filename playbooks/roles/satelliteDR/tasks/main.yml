@@ -149,10 +149,9 @@
         regexp: '.*fk_rails_08d19b0160.*'
         state: absent
 
-    - name: Restore cleaned foreman SQL into foreman db
+    - name: Restore cleaned foreman SQL into postgres
       ansible.builtin.shell: |
-        sudo -u postgres createdb -O foreman foreman || true
-        sudo -u postgres psql -d foreman -f /tmp/foreman_restore.sql
+        sudo -u postgres psql -d postgres -f /tmp/foreman_restore.sql
       register: foreman_sql_restore
       failed_when: foreman_sql_restore.rc != 0
 
@@ -215,6 +214,15 @@
       ansible.builtin.command: foreman-rake db:migrate
       register: db_migrate_result
       failed_when: db_migrate_result.rc != 0
+
+    # FIX: db:seed fails with NoMethodError on Filter#override= if the column
+    #      is missing from the restored schema. Ensure it exists before seeding.
+    - name: Ensure filters table has override column
+      ansible.builtin.shell: |
+        sudo -u postgres psql -d foreman -c "
+          ALTER TABLE filters ADD COLUMN IF NOT EXISTS override boolean DEFAULT false;
+        "
+      changed_when: false
 
     - name: Run database seeds
       ansible.builtin.command: foreman-rake db:seed
