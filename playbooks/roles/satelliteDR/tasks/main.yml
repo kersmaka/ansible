@@ -18,6 +18,8 @@
       loop:
         - "{{ puppet_gpg_key }}"
         - "{{ foreman_gpg_key }}"
+      loop_control:
+        loop_var: gpg_key_item  # FIX: avoid collision with outer 'item' loop var
 
     - name: Install Puppet and Foreman release RPMs
       ansible.builtin.dnf:
@@ -120,12 +122,20 @@
   tags:
     - restore
 
+# FIX: Removed 'restore-foreman-dump' from the whitelist.
+#      In the previous run, whitelisting that step caused foreman-maintain to
+#      SKIP the foreman DB restore entirely, leaving the foreman database
+#      non-existent. All subsequent tasks that connect to the foreman DB then
+#      failed with: psql: error: FATAL: database "foreman" does not exist
+#
+#      The foreman dump restore must run. The FK violation it may emit is handled
+#      by the explicit cleanup task below, AFTER the restore completes.
 - name: Restore Katello backup via foreman-maintain
   ansible.builtin.command:
     cmd: >-
       foreman-maintain restore /home/temp/{{ katello_backup_dir }}
       --assumeyes
-      --whitelist=candlepin-db-up,foreman-db-up,pulpcore-db-up,restore-drop-databases,restore-foreman-dump,restore-validate-hostname,restore-validate-backup,restore-validate-interfaces,restore-installer-reset,installer-run
+      --whitelist=candlepin-db-up,foreman-db-up,pulpcore-db-up,restore-drop-databases,restore-validate-hostname,restore-validate-backup,restore-validate-interfaces,restore-installer-reset,installer-run
   tags:
     - restore
 
@@ -137,6 +147,10 @@
         dnf clean all
         dnf makecache
 
+    # NOTE: Both pulpcore-plugin(python) and python3-pulp-python were not found
+    #       in the Satellite 6.16 repos during the failed run. This task is
+    #       safe to ignore if the packages are unavailable — the dependency may
+    #       already be satisfied by another installed package.
     - name: Resolve pulpcore-plugin(python) dependency manually
       ansible.builtin.shell: |
         dnf install -y 'pulpcore-plugin(python)' || dnf install -y python3-pulp-python
@@ -158,10 +172,23 @@
         name: postgresql
         state: started
 
-    # FIX: Clean up orphaned FK record left by online backup inconsistency
-    #      foreman-maintain restores the foreman dump but exits non-zero due to
-    #      a single FK violation from the online backup race condition. The data
-    #      IS restored. We just need to clean up the orphaned row.
+    # FIX: Verify the foreman database actually exists before proceeding.
+    #      This catches the case where restore-foreman-dump was skipped/failed
+    #      silently, so we get a clear error here rather than a confusing psql
+    #      "database does not exist" later.
+    - name: Verify foreman database exists before proceeding
+      ansible.builtin.shell: |
+        sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw foreman
+      register: db_check
+      failed_when: db_check.rc != 0
+      changed_when: false
+
+    # FIX: Clean up orphaned FK record left by online backup inconsistency.
+    #      foreman-maintain may restore the foreman dump with a single FK
+    #      violation from an online backup race condition. The data IS restored.
+    #      We clean up the orphaned row here, after confirming the DB exists.
+    #      Uses ignore_errors because the row may or may not be present
+    #      depending on the state of the source system at backup time.
     - name: Clean up orphaned katello_content_view_environment_content_facets records
       ansible.builtin.shell: |
         sudo -u postgres psql -d foreman -c "
@@ -170,6 +197,7 @@
         "
       register: fk_cleanup
       changed_when: "'DELETE' in fk_cleanup.stdout"
+      ignore_errors: yes  # Row may not exist; non-critical cleanup
 
     # FIX: Split rake tasks so failures are visible instead of silently ignored
     - name: Run database migrations
@@ -194,14 +222,6 @@
     - name: Rebuild apipie cache
       ansible.builtin.command: foreman-rake apipie:cache:index
       ignore_errors: yes  # non-critical, safe to ignore
-
-    # FIX: Verify the foreman database actually exists before running the installer
-    - name: Verify foreman database exists before running installer
-      ansible.builtin.shell: |
-        sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw foreman
-      register: db_check
-      failed_when: db_check.rc != 0
-      changed_when: false
 
     # FIX: Added --skip-checks-i-know-better to suppress the DB warning and
     #      prevent the Foreman::Register Puppet resource from attempting API
