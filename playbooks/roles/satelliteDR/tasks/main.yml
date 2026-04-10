@@ -13,13 +13,13 @@
   block:
     - name: Import GPG keys for Puppet and Foreman
       ansible.builtin.rpm_key:
-        key: "{{ item }}"
+        key: "{{ gpg_key_item }}"
         state: present
       loop:
         - "{{ puppet_gpg_key }}"
         - "{{ foreman_gpg_key }}"
       loop_control:
-        loop_var: gpg_key_item  # FIX: avoid collision with outer 'item' loop var
+        loop_var: gpg_key_item  # avoids collision with any outer 'item' loop var
 
     - name: Install Puppet and Foreman release RPMs
       ansible.builtin.dnf:
