@@ -19,7 +19,7 @@
         - "{{ puppet_gpg_key }}"
         - "{{ foreman_gpg_key }}"
       loop_control:
-        loop_var: gpg_key_item  # avoids collision with any outer 'item' loop var
+        loop_var: gpg_key_item
 
     - name: Install Puppet and Foreman release RPMs
       ansible.builtin.dnf:
@@ -141,10 +141,8 @@
   tags:
     - restore
 
-# FIX: foreman-maintain stops PostgreSQL at the end of its restore sequence
-#      (before extracting pulp data). We must restart it before running
-#      pg_restore manually, otherwise pg_restore cannot connect and fails with
-#      "No such file or directory" on the Unix socket.
+# FIX: foreman-maintain stops PostgreSQL at the end of its restore sequence.
+#      We must restart it before running pg_restore manually.
 - name: Start PostgreSQL before manual foreman dump restore
   ansible.builtin.systemd:
     name: postgresql
@@ -153,11 +151,10 @@
     - restore
 
 # FIX: Manually restore the foreman PostgreSQL dump because foreman-maintain
-#      always SKIPS restore-foreman-dump when it is whitelisted. We run
-#      pg_restore directly so we own the outcome. The dump contains one known
-#      FK violation (content_facet_id=45 orphan from an online backup race
-#      condition) which causes pg_restore to exit rc=1 — this is expected and
-#      safe. The data IS fully restored. The orphaned row is cleaned up below.
+#      always SKIPS restore-foreman-dump when it is whitelisted. The dump
+#      contains one known FK violation (content_facet_id=45 orphan from an
+#      online backup race condition) which causes pg_restore to exit rc=1 —
+#      this is expected and safe. The orphaned row is cleaned up below.
 - name: Manually restore foreman PostgreSQL dump
   ansible.builtin.shell: |
     sudo -u postgres pg_restore -C -d postgres \
@@ -176,10 +173,9 @@
         dnf clean all
         dnf makecache
 
-    # NOTE: Both pulpcore-plugin(python) and python3-pulp-python were not found
-    #       in the Satellite 6.16 repos during the failed run. This task is
-    #       safe to ignore if the packages are unavailable — the dependency may
-    #       already be satisfied by another installed package.
+    # NOTE: Both pulpcore-plugin(python) and python3-pulp-python are not
+    #       available in Satellite 6.16 repos. Safe to ignore — the dependency
+    #       is already satisfied by another installed package.
     - name: Resolve pulpcore-plugin(python) dependency manually
       ansible.builtin.shell: |
         dnf install -y 'pulpcore-plugin(python)' || dnf install -y python3-pulp-python
@@ -202,9 +198,7 @@
         state: started
 
     # FIX: Verify the foreman database actually exists before proceeding.
-    #      This catches the case where restore-foreman-dump was skipped/failed
-    #      silently, so we get a clear error here rather than a confusing psql
-    #      "database does not exist" later.
+    #      Catches the case where restore-foreman-dump was silently skipped.
     - name: Verify foreman database exists before proceeding
       ansible.builtin.shell: |
         sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw foreman
@@ -212,12 +206,8 @@
       failed_when: db_check.rc != 0
       changed_when: false
 
-    # FIX: Clean up orphaned FK record left by online backup inconsistency.
-    #      foreman-maintain may restore the foreman dump with a single FK
-    #      violation from an online backup race condition. The data IS restored.
-    #      We clean up the orphaned row here, after confirming the DB exists.
-    #      Uses ignore_errors because the row may or may not be present
-    #      depending on the state of the source system at backup time.
+    # FIX: Clean up orphaned FK record left by online backup race condition.
+    #      Uses ignore_errors because the row may or may not be present.
     - name: Clean up orphaned katello_content_view_environment_content_facets records
       ansible.builtin.shell: |
         sudo -u postgres psql -d foreman -c "
@@ -226,9 +216,8 @@
         "
       register: fk_cleanup
       changed_when: "'DELETE' in fk_cleanup.stdout"
-      ignore_errors: yes  # Row may not exist; non-critical cleanup
+      ignore_errors: yes
 
-    # FIX: Split rake tasks so failures are visible instead of silently ignored
     - name: Run database migrations
       ansible.builtin.command: foreman-rake db:migrate
       register: db_migrate_result
@@ -249,41 +238,17 @@
       failed_when: db_seed_result.rc != 0
 
     # FIX: Start Redis before apipie cache rebuild. Without it, foreman-rake
-    #      opens hundreds of sockets trying to connect and hits EMFILE (too many
-    #      open files). apipie:cache:index uses Redis as its cache store.
+    #      opens hundreds of sockets and hits EMFILE (too many open files).
     - name: Start Redis before apipie cache rebuild
       ansible.builtin.systemd:
         name: redis
         state: started
 
-    - name: Clear stale apipie cache before rebuild
-      ansible.builtin.file:
-        path: /usr/share/foreman/public/apipie-cache
-        state: absent
-
-    - name: Recreate empty apipie cache directory
-      ansible.builtin.file:
-        path: /usr/share/foreman/public/apipie-cache
-        state: directory
-        owner: foreman
-        group: foreman
-        mode: '0755'
-
-    - name: Clear Rails cache
-      ansible.builtin.command: foreman-rake tmp:cache:clear
-      ignore_errors: yes
-    
-    - name: Rebuild apipie cache
-      ansible.builtin.command: foreman-rake apipie:cache:index
-      ignore_errors: yes  # non-critical, safe to ignore
-
-    # FIX: foreman-installer fails rc=6 because the Foreman::Register class
-    #      fires a Foreman_instance_host Puppet resource that makes a GET to
-    #      the Foreman API, which returns 500 while Foreman is still starting.
-    #      --foreman-proxy-register-in-foreman=false only suppresses the proxy
-    #      registration. We also need --foreman-register-in-foreman=false to
-    #      suppress the Foreman::Register class itself, and
-    #      --foreman-proxy-register-in-foreman=false for the proxy side.
+    # FIX: Run foreman-installer BEFORE rebuilding caches. The installer
+    #      restarts services and runs upgrade:run rake tasks which can
+    #      regenerate or corrupt cache state. Building cache before the
+    #      installer runs is wasted effort and causes the Marshal format
+    #      mismatch 500 error on the API health check.
     - name: Run foreman-installer to reconcile configuration
       ansible.builtin.command:
         cmd: >-
@@ -297,8 +262,42 @@
       register: foreman_installer_result
       failed_when: foreman_installer_result.rc != 0
 
-    # FIX: Wait for the Foreman API to be healthy before declaring success,
-    #      catching the 500 error that caused the original failure
+    # FIX: Nuke ALL cache locations after foreman-installer completes.
+    #      The installer's upgrade:run tasks can leave stale or partially-written
+    #      Marshal files in both tmp/cache and apipie-cache. The Marshal format
+    #      mismatch 500 error persists when only apipie-cache is cleared because
+    #      Rails tmp/cache also holds serialized objects from the backup's Ruby
+    #      version. Both must be wiped and rebuilt cleanly after the installer.
+    - name: Nuke full Rails tmp/cache directory
+      ansible.builtin.file:
+        path: /usr/share/foreman/tmp/cache
+        state: absent
+
+    - name: Recreate Rails tmp/cache directory
+      ansible.builtin.file:
+        path: /usr/share/foreman/tmp/cache
+        state: directory
+        owner: foreman
+        group: foreman
+        mode: '0755'
+
+    - name: Nuke apipie cache directory
+      ansible.builtin.file:
+        path: /usr/share/foreman/public/apipie-cache
+        state: absent
+
+    - name: Recreate apipie cache directory
+      ansible.builtin.file:
+        path: /usr/share/foreman/public/apipie-cache
+        state: directory
+        owner: foreman
+        group: foreman
+        mode: '0755'
+
+    - name: Rebuild apipie cache
+      ansible.builtin.command: foreman-rake apipie:cache:index
+
+    # FIX: Wait for the Foreman API to be healthy before declaring success.
     - name: Wait for Foreman API to become healthy
       ansible.builtin.uri:
         url: "https://foreman.homelab.com/api/v2/hosts"
