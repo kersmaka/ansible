@@ -125,7 +125,7 @@
     cmd: >-
       foreman-maintain restore /home/temp/{{ katello_backup_dir }}
       --assumeyes
-      --whitelist=candlepin-db-up,foreman-db-up,pulpcore-db-up,restore-drop-databases,restore-foreman-dump,restore-validate-hostname,restore-validate-backup,restore-validate-interfaces,restore-installer-reset,installer-run
+      --whitelist=candlepin-db-up,foreman-db-up,pulpcore-db-up,restore-drop-databases,restore-validate-hostname,restore-validate-backup,restore-validate-interfaces,restore-installer-reset,installer-run
   tags:
     - restore
 
@@ -153,12 +153,24 @@
 
 - name: Finalize restore and reconcile services
   block:
-    - name: Ensure PostgreSQL is running
+    - name: Ensure PostgreSQL is running after foreman-maintain
       ansible.builtin.systemd:
         name: postgresql
         state: started
 
-    # FIX: Clean up orphaned FK records left by online backup inconsistency
+    # FIX: foreman-maintain skips foreman dump restore on FK violation warning.
+    #      Restore it manually with --exit-on-error=false to tolerate the single
+    #      FK warning from the online backup inconsistency.
+    - name: Restore foreman database manually with FK error tolerance
+      ansible.builtin.shell: |
+        sudo -u postgres pg_restore -C -d postgres \
+          --exit-on-error=false \
+          /home/temp/{{ katello_backup_dir }}/foreman.dump
+      register: foreman_restore
+      failed_when: false
+
+    # FIX: Clean up the orphaned FK record introduced by the online backup
+    #      inconsistency so db:migrate does not trip over it
     - name: Clean up orphaned katello_content_view_environment_content_facets records
       ansible.builtin.shell: |
         sudo -u postgres psql -d foreman -c "
