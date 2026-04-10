@@ -244,11 +244,10 @@
         name: redis
         state: started
 
-    # FIX: Run foreman-installer BEFORE rebuilding caches. The installer
-    #      restarts services and runs upgrade:run rake tasks which can
-    #      regenerate or corrupt cache state. Building cache before the
-    #      installer runs is wasted effort and causes the Marshal format
-    #      mismatch 500 error on the API health check.
+    # FIX: Run foreman-installer BEFORE cache wipe. The installer restarts
+    #      services and runs upgrade:run rake tasks which can regenerate or
+    #      corrupt cache state. All caches must be wiped AFTER the installer
+    #      completes to ensure a clean slate for the running web process.
     - name: Run foreman-installer to reconcile configuration
       ansible.builtin.command:
         cmd: >-
@@ -262,24 +261,28 @@
       register: foreman_installer_result
       failed_when: foreman_installer_result.rc != 0
 
-    # FIX: Nuke ALL cache locations after foreman-installer completes.
-    #      The installer's upgrade:run tasks can leave stale or partially-written
-    #      Marshal files in both tmp/cache and apipie-cache. The Marshal format
-    #      mismatch 500 error persists when only apipie-cache is cleared because
-    #      Rails tmp/cache also holds serialized objects from the backup's Ruby
-    #      version. Both must be wiped and rebuilt cleanly after the installer.
-    - name: Nuke full Rails tmp/cache directory
+    # FIX: Nuke the ENTIRE tmp/ directory, not just tmp/cache. Marshal files
+    #      can exist anywhere under tmp/ (pids, sockets subdirs included) and
+    #      survive a partial cache wipe. Also clear /var/cache/foreman which
+    #      holds additional serialized state that can carry stale Marshal data
+    #      from the backup's Ruby version.
+    - name: Nuke entire Foreman tmp directory
       ansible.builtin.file:
-        path: /usr/share/foreman/tmp/cache
+        path: /usr/share/foreman/tmp
         state: absent
 
-    - name: Recreate Rails tmp/cache directory
+    - name: Recreate Foreman tmp directory structure
       ansible.builtin.file:
-        path: /usr/share/foreman/tmp/cache
+        path: "{{ item }}"
         state: directory
         owner: foreman
         group: foreman
         mode: '0755'
+      loop:
+        - /usr/share/foreman/tmp
+        - /usr/share/foreman/tmp/cache
+        - /usr/share/foreman/tmp/pids
+        - /usr/share/foreman/tmp/sockets
 
     - name: Nuke apipie cache directory
       ansible.builtin.file:
@@ -294,17 +297,41 @@
         group: foreman
         mode: '0755'
 
-    - name: Rebuild apipie cache
-      ansible.builtin.command: foreman-rake apipie:cache:index
+    # FIX: Clear /var/cache/foreman which holds additional serialized state
+    #      that can carry stale Marshal data from the backup's Ruby version.
+    - name: Nuke Foreman var cache
+      ansible.builtin.file:
+        path: /var/cache/foreman
+        state: absent
 
-    - name: Restart all Foreman services after cache rebuild
+    - name: Recreate Foreman var cache
+      ansible.builtin.file:
+        path: /var/cache/foreman
+        state: directory
+        owner: foreman
+        group: foreman
+        mode: '0755'
+
+    # FIX: Restart ALL services after the full cache wipe so that the running
+    #      web process starts cold with no in-memory stale state, then let it
+    #      stabilize before rebuilding the apipie cache. This ensures the rake
+    #      process and httpd share the same Ruby runtime Marshal version when
+    #      writing and reading cache files.
+    - name: Restart all Foreman services after cache wipe
       ansible.builtin.command: foreman-maintain service restart
       register: service_restart
       failed_when: service_restart.rc != 0
 
-    - name: Wait for services to stabilize
+    - name: Wait for services to stabilize before rebuilding apipie cache
       ansible.builtin.pause:
-        seconds: 30  
+        seconds: 45
+
+    # FIX: Rebuild apipie cache AFTER the service restart and stabilization
+    #      pause. This ensures foreman-rake runs against the same live Ruby
+    #      environment as the httpd web process, preventing Marshal version
+    #      mismatches between the writer (rake) and reader (httpd).
+    - name: Rebuild apipie cache
+      ansible.builtin.command: foreman-rake apipie:cache:index
 
     # FIX: Wait for the Foreman API to be healthy before declaring success.
     - name: Wait for Foreman API to become healthy
