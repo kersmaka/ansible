@@ -141,6 +141,17 @@
   tags:
     - restore
 
+# FIX: foreman-maintain stops PostgreSQL at the end of its restore sequence
+#      (before extracting pulp data). We must restart it before running
+#      pg_restore manually, otherwise pg_restore cannot connect and fails with
+#      "No such file or directory" on the Unix socket.
+- name: Start PostgreSQL before manual foreman dump restore
+  ansible.builtin.systemd:
+    name: postgresql
+    state: started
+  tags:
+    - restore
+
 # FIX: Manually restore the foreman PostgreSQL dump because foreman-maintain
 #      always SKIPS restore-foreman-dump when it is whitelisted. We run
 #      pg_restore directly so we own the outcome. The dump contains one known
