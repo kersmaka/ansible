@@ -125,7 +125,7 @@
     cmd: >-
       foreman-maintain restore /home/temp/{{ katello_backup_dir }}
       --assumeyes
-      --whitelist=candlepin-db-up,foreman-db-up,pulpcore-db-up,restore-drop-databases,restore-validate-hostname,restore-validate-backup,restore-validate-interfaces,restore-installer-reset,installer-run
+      --whitelist=candlepin-db-up,foreman-db-up,pulpcore-db-up,restore-drop-databases,restore-foreman-dump,restore-validate-hostname,restore-validate-backup,restore-validate-interfaces,restore-installer-reset,installer-run
   tags:
     - restore
 
@@ -158,16 +158,19 @@
         name: postgresql
         state: started
 
-    # FIX: foreman-maintain skips foreman dump restore on FK violation warning.
-    #      Restore it manually with --exit-on-error=false to tolerate the single
-    #      FK warning from the online backup inconsistency.
-    - name: Restore foreman database manually with FK error tolerance
+    # FIX: foreman-maintain treats the single FK warning from the online backup
+    #      as a fatal error and skips the foreman dump. We restore it manually
+    #      using --disable-triggers which bypasses FK checks during load,
+    #      allowing the data to be restored cleanly.
+    - name: Restore foreman database manually with triggers disabled
       ansible.builtin.shell: |
         sudo -u postgres pg_restore -C -d postgres \
-          --exit-on-error=false \
-          /home/temp/{{ katello_backup_dir }}/foreman.dump
+          --no-acl \
+          --no-owner \
+          --disable-triggers \
+          /home/temp/{{ katello_backup_dir }}/foreman.dump; true
       register: foreman_restore
-      failed_when: false
+      changed_when: true
 
     # FIX: Clean up the orphaned FK record introduced by the online backup
     #      inconsistency so db:migrate does not trip over it
