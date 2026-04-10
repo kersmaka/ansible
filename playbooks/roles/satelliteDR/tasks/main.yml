@@ -149,9 +149,10 @@
         regexp: '.*fk_rails_08d19b0160.*'
         state: absent
 
-    - name: Restore cleaned foreman SQL into postgres
+    - name: Restore cleaned foreman SQL into foreman db
       ansible.builtin.shell: |
-        sudo -u postgres psql -d postgres -f /tmp/foreman_restore.sql
+        sudo -u postgres createdb -O foreman foreman || true
+        sudo -u postgres psql -d foreman -f /tmp/foreman_restore.sql
       register: foreman_sql_restore
       failed_when: foreman_sql_restore.rc != 0
 
