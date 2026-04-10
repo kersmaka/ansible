@@ -90,16 +90,6 @@
   tags:
     - restore
 
-- name: Enable Satellite repositories via subscription-manager
-  ansible.builtin.command:
-    cmd: >-
-      subscription-manager repos
-      --enable=satellite-6.16-for-rhel-9-x86_64-rpms
-      --enable=satellite-maintenance-6.16-for-rhel-9-x86_64-rpms
-      --enable=satellite-client-6-for-rhel-9-x86_64-rpms
-  tags:
-    - repos
-
 - name: Prepare database for restore
   block:
     - name: Stop all services to release database locks
@@ -167,15 +157,9 @@
 
 - name: Post-restore configuration fixes
   block:
-    - name: Refresh DNF metadata and subscriptions
-      ansible.builtin.shell: |
-        subscription-manager refresh
-        dnf clean all
-        dnf makecache
-
-    # NOTE: Both pulpcore-plugin(python) and python3-pulp-python are not
-    #       available in Satellite 6.16 repos. Safe to ignore — the dependency
-    #       is already satisfied by another installed package.
+    # NOTE: Both pulpcore-plugin(python) and python3-pulp-python may not be
+    #       available in all repo configurations. Safe to ignore — the dependency
+    #       is already satisfied by another installed package in most cases.
     - name: Resolve pulpcore-plugin(python) dependency manually
       ansible.builtin.shell: |
         dnf install -y 'pulpcore-plugin(python)' || dnf install -y python3-pulp-python
