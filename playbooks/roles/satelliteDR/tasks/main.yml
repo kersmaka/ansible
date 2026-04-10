@@ -256,6 +256,23 @@
         name: redis
         state: started
 
+    - name: Clear stale apipie cache before rebuild
+      ansible.builtin.file:
+        path: /usr/share/foreman/public/apipie-cache
+        state: absent
+
+    - name: Recreate empty apipie cache directory
+      ansible.builtin.file:
+        path: /usr/share/foreman/public/apipie-cache
+        state: directory
+        owner: foreman
+        group: foreman
+        mode: '0755'
+
+    - name: Clear Rails cache
+      ansible.builtin.command: foreman-rake tmp:cache:clear
+      ignore_errors: yes
+    
     - name: Rebuild apipie cache
       ansible.builtin.command: foreman-rake apipie:cache:index
       ignore_errors: yes  # non-critical, safe to ignore
