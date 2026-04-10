@@ -244,6 +244,13 @@
         name: redis
         state: started
 
+    # NEW FIX: Nuke the Redis cache containing stale serialized Ruby objects
+    #          from the older OS/Backup.
+    - name: Flush Redis cache to prevent Ruby Marshal compatibility issues
+      ansible.builtin.command: redis-cli flushall
+      register: redis_flush
+      changed_when: "'OK' in redis_flush.stdout"
+
     # FIX: Run foreman-installer BEFORE cache wipe. The installer restarts
     #      services and runs upgrade:run rake tasks which can regenerate or
     #      corrupt cache state. All caches must be wiped AFTER the installer
