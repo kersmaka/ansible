@@ -45,3 +45,14 @@
       ansible.builtin.dnf:
         name: foreman-installer-katello
         state: present
+
+    - name: Run Foreman installer with Katello scenario
+      ansible.builtin.command:
+        cmd: foreman-installer --scenario katello
+        creates: /etc/foreman-installer/scenarios.d/katello.yml.applied
+      register: foreman_installer_output
+      timeout: 1800
+
+    - name: Display Foreman installer output
+      ansible.builtin.debug:
+        var: foreman_installer_output.stdout_lines    
