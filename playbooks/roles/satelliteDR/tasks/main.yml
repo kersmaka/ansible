@@ -56,3 +56,53 @@
     - name: Display Foreman installer output
       ansible.builtin.debug:
         var: foreman_installer_output.stdout_lines    
+
+    - name: Create /home/temp directory on Foreman host
+      ansible.builtin.file:
+        path: /home/temp
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+
+    - name: Copy katello-backup.tar.gz to Foreman host
+      ansible.builtin.copy:
+        src: /home/temp/katello-backup.tar.gz
+        dest: /home/temp/katello-backup.tar.gz
+        owner: root
+        group: root
+        mode: '0644'
+      delegate_to: homelab
+
+    - name: Create udev persistent net rules for NIC rename
+      ansible.builtin.copy:
+        dest: /etc/udev/rules.d/70-persistent-net.rules
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          SUBSYSTEM=="net", ACTION=="add", ATTR{address}=="52:54:00:29:55:e7", NAME="enp1s0"
+
+    - name: Gather network facts
+      ansible.builtin.setup:
+        gather_subset:
+          - network
+
+    - name: Create udev persistent net rules for NIC rename
+      ansible.builtin.copy:
+        dest: /etc/udev/rules.d/70-persistent-net.rules
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          SUBSYSTEM=="net", ACTION=="add", ATTR{address}=="{{ ansible_default_ipv4.macaddress }}", NAME="enp1s0"
+
+    - name: Rename NIC connection profile in NetworkManager
+      ansible.builtin.command:
+        cmd: nmcli connection modify "Wired connection 1" connection.interface-name enp1s0
+      changed_when: true
+
+    - name: Reboot after NIC rename
+      ansible.builtin.reboot:
+        reboot_timeout: 300
+        msg: "Rebooting to apply NIC rename"
