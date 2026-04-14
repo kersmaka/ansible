@@ -57,22 +57,33 @@
       ansible.builtin.debug:
         var: foreman_installer_output.stdout_lines    
 
-    - name: Create /home/temp directory on Foreman host
+    - name: Handle Katello backup archive
+      block:
+    - name: Ensure rsync is installed on kvm_host
+      ansible.builtin.package:
+        name: rsync
+        state: present
+      delegate_to: kvm_host
+
+    - name: Copy Katello backup from kvm_host
+      ansible.builtin.synchronize:
+        src: "/home/temp/{{ katello_backup_file }}"
+        dest: "/tmp/{{ katello_backup_file }}"
+        mode: push
+        dest_port: 22
+      delegate_to: kvm_host
+
+    - name: Ensure /home/temp directory exists
       ansible.builtin.file:
         path: /home/temp
         state: directory
         mode: '0755'
-        owner: root
-        group: root
 
-    - name: Copy katello-backup.tar.gz to Foreman host
-      ansible.builtin.copy:
-        src: /home/temp/katello-backup.tar.gz
-        dest: /home/temp/katello-backup.tar.gz
-        owner: root
-        group: root
-        mode: '0644'
-      delegate_to: homelab
+    - name: Extract archive to /home/temp
+      ansible.builtin.unarchive:
+        src: "/tmp/{{ katello_backup_file }}"
+        dest: /home/temp/
+        remote_src: yes
 
     - name: Create udev persistent net rules for NIC rename
       ansible.builtin.copy:
