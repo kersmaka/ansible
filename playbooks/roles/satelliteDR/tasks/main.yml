@@ -103,4 +103,13 @@
     reboot_timeout: 300
     msg: "Rebooting to apply NIC rename"
 
-    
+- name: Run Foreman-maintain restore
+  ansible.builtin.command:
+    cmd: foreman-maintain restore --assumeyes /tmp/katello-backup-2026-04-11-10-51-29/
+    creates: /etc/foreman-installer/scenarios.d/katello.yml.applied
+  register: foreman_restore_output
+  timeout: 3600
+
+- name: Display Foreman restore output
+  ansible.builtin.debug:
+    var: foreman_restore_output.stdout_lines    
