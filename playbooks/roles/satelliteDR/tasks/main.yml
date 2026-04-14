@@ -78,16 +78,10 @@
         dest_port: 22
       delegate_to: kvm_host
 
-    - name: Ensure /home/temp directory exists
-      ansible.builtin.file:
-        path: /home/temp
-        state: directory
-        mode: '0755'
-
-    - name: Extract archive to /home/temp
+    - name: Extract archive to /tmp
       ansible.builtin.unarchive:
         src: "/tmp/{{ katello_backup_file }}"
-        dest: /home/temp/
+        dest: /tmp/
         remote_src: true
 
 - name: Create udev persistent net rules for NIC rename
