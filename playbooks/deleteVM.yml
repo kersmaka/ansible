@@ -6,14 +6,22 @@
     image_path: "/home/ansible_admin/vms/qcow2/{{ vm_name }}.qcow2"
 
   tasks:
-    - name: Force stop and undefine VM
-      ansible.builtin.shell: |
-        virsh destroy {{ vm_name }} || true
-        virsh undefine {{ vm_name }} --remove-all-storage
-      register: virsh_output
-      failed_when: 
-        - virsh_output.rc != 0
-        - "'domain not found' not in virsh_output.stderr"
+    - name: Ensure VM is stopped
+      community.libvirt.virt:
+        name: "{{ vm_name }}"
+        state: destroyed
+      failed_when: false # Ignore if already stopped
+
+    - name: Undefine VM and cleanup snapshots/storage
+      ansible.builtin.command: >
+        virsh undefine {{ vm_name }} 
+        --remove-all-storage 
+        --snapshots-metadata 
+        --nvram
+      register: undefine_out
+      failed_when:
+        - undefine_out.rc != 0
+        - "'domain not found' not in undefine_out.stderr"
 
     - name: Ensure qcow2 file is deleted (fallback)
       ansible.builtin.file:
