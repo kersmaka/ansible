@@ -26,3 +26,6 @@ ansible.homelab.com ansible_ssh_host=192.168.0.119 ansible_user=aap
 
 [destination]
 new-ansible.homelab.com
+
+[homelab]
+homelab.homelab.com ansible_ssh_host=192.168.0.200 ansible_user=root
