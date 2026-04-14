@@ -1,64 +1,69 @@
 ---
-    - name: Clean all DNF cache
-      ansible.builtin.command:
-        cmd: dnf clean all
-      changed_when: true
+- name: Gather network facts
+  ansible.builtin.setup:
+    gather_subset:
+      - network
 
-    - name: Install Foreman release RPM
-      ansible.builtin.dnf:
-        name: https://yum.theforeman.org/releases/3.17/el9/x86_64/foreman-release.rpm
-        state: present
-        disable_gpg_check: true
+- name: Clean all DNF cache
+  ansible.builtin.command:
+    cmd: dnf clean all
+  changed_when: true
 
-    - name: Install Katello repos RPM
-      ansible.builtin.dnf:
-        name: https://yum.theforeman.org/katello/4.19/katello/el9/x86_64/katello-repos-latest.rpm
-        state: present
-        disable_gpg_check: true
+- name: Install Foreman release RPM
+  ansible.builtin.dnf:
+    name: https://yum.theforeman.org/releases/3.17/el9/x86_64/foreman-release.rpm
+    state: present
+    disable_gpg_check: true
 
-    - name: Install Puppet 8 release RPM
-      ansible.builtin.dnf:
-        name: https://yum.puppet.com/puppet8-release-el-9.noarch.rpm
-        state: present
-        disable_gpg_check: true
+- name: Install Katello repos RPM
+  ansible.builtin.dnf:
+    name: https://yum.theforeman.org/katello/4.19/katello/el9/x86_64/katello-repos-latest.rpm
+    state: present
+    disable_gpg_check: true
 
-    - name: Upgrade all packages
-      ansible.builtin.dnf:
-        name: "*"
-        state: latest
-        update_only: true
-      register: dnf_upgrade
+- name: Install Puppet 8 release RPM
+  ansible.builtin.dnf:
+    name: https://yum.puppet.com/puppet8-release-el-9.noarch.rpm
+    state: present
+    disable_gpg_check: true
 
-    - name: Add host entry to /etc/hosts
-      ansible.builtin.lineinfile:
-        path: /etc/hosts
-        line: "{{ ansible_default_ipv4.address }} {{ ansible_fqdn }} {{ ansible_hostname }}"
-        regexp: "^{{ ansible_default_ipv4.address }}"
-        state: present  
+- name: Upgrade all packages
+  ansible.builtin.dnf:
+    name: "*"
+    state: latest
+    update_only: true
+  register: dnf_upgrade
 
-    - name: Reboot if kernel was updated
-      ansible.builtin.reboot:
-        reboot_timeout: 300
-      when: dnf_upgrade.changed and "'kernel' in dnf_upgrade.results | join(' ')"
+- name: Add host entry to /etc/hosts
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "{{ ansible_default_ipv4.address }} {{ ansible_fqdn }} {{ ansible_hostname }}"
+    regexp: "^{{ ansible_default_ipv4.address }}"
+    state: present
 
-    - name: Install foreman-installer-katello
-      ansible.builtin.dnf:
-        name: foreman-installer-katello
-        state: present
+- name: Reboot if kernel was updated
+  ansible.builtin.reboot:
+    reboot_timeout: 300
+  when: dnf_upgrade.changed and "'kernel' in dnf_upgrade.results | join(' ')"
 
-    - name: Run Foreman installer with Katello scenario
-      ansible.builtin.command:
-        cmd: foreman-installer --scenario katello
-        creates: /etc/foreman-installer/scenarios.d/katello.yml.applied
-      register: foreman_installer_output
-      timeout: 1800
+- name: Install foreman-installer-katello
+  ansible.builtin.dnf:
+    name: foreman-installer-katello
+    state: present
 
-    - name: Display Foreman installer output
-      ansible.builtin.debug:
-        var: foreman_installer_output.stdout_lines    
+- name: Run Foreman installer with Katello scenario
+  ansible.builtin.command:
+    cmd: foreman-installer --scenario katello
+    creates: /etc/foreman-installer/scenarios.d/katello.yml.applied
+  register: foreman_installer_output
+  timeout: 1800
 
-    - name: Handle Katello backup archive
-      block:
+- name: Display Foreman installer output
+  ansible.builtin.debug:
+    var: foreman_installer_output.stdout_lines
+
+- name: Handle Katello backup archive
+  block:
     - name: Ensure rsync is installed on kvm_host
       ansible.builtin.package:
         name: rsync
@@ -83,37 +88,23 @@
       ansible.builtin.unarchive:
         src: "/tmp/{{ katello_backup_file }}"
         dest: /home/temp/
-        remote_src: yes
+        remote_src: true
 
-    - name: Create udev persistent net rules for NIC rename
-      ansible.builtin.copy:
-        dest: /etc/udev/rules.d/70-persistent-net.rules
-        owner: root
-        group: root
-        mode: '0644'
-        content: |
-          SUBSYSTEM=="net", ACTION=="add", ATTR{address}=="52:54:00:29:55:e7", NAME="enp1s0"
+- name: Create udev persistent net rules for NIC rename
+  ansible.builtin.copy:
+    dest: /etc/udev/rules.d/70-persistent-net.rules
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      SUBSYSTEM=="net", ACTION=="add", ATTR{address}=="{{ ansible_default_ipv4.macaddress }}", NAME="enp1s0"
 
-    - name: Gather network facts
-      ansible.builtin.setup:
-        gather_subset:
-          - network
+- name: Rename NIC connection profile in NetworkManager
+  ansible.builtin.command:
+    cmd: nmcli connection modify "Wired connection 1" connection.interface-name enp1s0
+  changed_when: true
 
-    - name: Create udev persistent net rules for NIC rename
-      ansible.builtin.copy:
-        dest: /etc/udev/rules.d/70-persistent-net.rules
-        owner: root
-        group: root
-        mode: '0644'
-        content: |
-          SUBSYSTEM=="net", ACTION=="add", ATTR{address}=="{{ ansible_default_ipv4.macaddress }}", NAME="enp1s0"
-
-    - name: Rename NIC connection profile in NetworkManager
-      ansible.builtin.command:
-        cmd: nmcli connection modify "Wired connection 1" connection.interface-name enp1s0
-      changed_when: true
-
-    - name: Reboot after NIC rename
-      ansible.builtin.reboot:
-        reboot_timeout: 300
-        msg: "Rebooting to apply NIC rename"
+- name: Reboot after NIC rename
+  ansible.builtin.reboot:
+    reboot_timeout: 300
+    msg: "Rebooting to apply NIC rename"
