@@ -84,6 +84,15 @@
         dest: /tmp/
         remote_src: true
 
+    - name: Set ownership of Katello backup directory to postgres
+      ansible.builtin.file:
+        path: /tmp/katello-backup-2026-04-11-10-51-29/
+        owner: postgres
+        group: postgres
+        recurse: true
+        state: directory    
+    
+
 - name: Create udev persistent net rules for NIC rename
   ansible.builtin.copy:
     dest: /etc/udev/rules.d/70-persistent-net.rules
@@ -102,6 +111,7 @@
   ansible.builtin.reboot:
     reboot_timeout: 300
     msg: "Rebooting to apply NIC rename"
+
 
 - name: Run Foreman-maintain restore
   ansible.builtin.command:
