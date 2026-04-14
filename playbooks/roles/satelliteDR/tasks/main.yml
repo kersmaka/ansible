@@ -1,317 +1,47 @@
 ---
-- name: Verify OS is RHEL/Rocky/AlmaLinux 9
-  ansible.builtin.assert:
-    that:
-      - ansible_distribution_major_version == "9"
-    fail_msg: "This playbook requires EL9. Found: {{ ansible_distribution }} {{ ansible_distribution_major_version }}"
-    success_msg: "OS check passed: {{ ansible_distribution }} {{ ansible_distribution_major_version }}"
-  tags:
-    - preflight
-    - always
+    - name: Clean all DNF cache
+      ansible.builtin.command:
+        cmd: dnf clean all
+      changed_when: true
 
-- name: Configure repositories and install maintenance tools
-  block:
-    - name: Import GPG keys for Puppet and Foreman
-      ansible.builtin.rpm_key:
-        key: "{{ gpg_key_item }}"
-        state: present
-      loop:
-        - "{{ puppet_gpg_key }}"
-        - "{{ foreman_gpg_key }}"
-      loop_control:
-        loop_var: gpg_key_item
-
-    - name: Install Puppet and Foreman release RPMs
+    - name: Install Foreman release RPM
       ansible.builtin.dnf:
-        name:
-          - "{{ puppet_release_rpm }}"
-          - "{{ foreman_release_rpm }}"
+        name: https://yum.theforeman.org/releases/3.17/el9/x86_64/foreman-release.rpm
         state: present
-        disable_gpg_check: false
+        disable_gpg_check: true
 
-    - name: Install foreman-installer and maintenance tools
+    - name: Install Katello repos RPM
       ansible.builtin.dnf:
-        name:
-          - "{{ foreman_installer_package }}"
-          - rubygem-foreman_maintain
+        name: https://yum.theforeman.org/katello/4.19/katello/el9/x86_64/katello-repos-latest.rpm
         state: present
-  tags:
-    - repos
-    - install
+        disable_gpg_check: true
 
-- name: Configure networking and hostname
-  block:
-    - name: Get primary IPv4 address
-      ansible.builtin.set_fact:
-        foreman_ip: "{{ ansible_default_ipv4.address }}"
+    - name: Install Puppet 8 release RPM
+      ansible.builtin.dnf:
+        name: https://yum.puppet.com/puppet8-release-el-9.noarch.rpm
+        state: present
+        disable_gpg_check: true
 
-    - name: Ensure foreman.homelab.com is in /etc/hosts
+    - name: Upgrade all packages
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+        update_only: true
+      register: dnf_upgrade
+
+    - name: Add host entry to /etc/hosts
       ansible.builtin.lineinfile:
         path: /etc/hosts
-        regexp: '.*foreman\.homelab\.com.*'
-        line: "{{ foreman_ip }}\tforeman.homelab.com foreman"
+        line: "{{ ansible_default_ipv4.address }} {{ ansible_fqdn }} {{ ansible_hostname }}"
+        regexp: "^{{ ansible_default_ipv4.address }}"
+        state: present  
+
+    - name: Reboot if kernel was updated
+      ansible.builtin.reboot:
+        reboot_timeout: 300
+      when: dnf_upgrade.changed and "'kernel' in dnf_upgrade.results | join(' ')"
+
+    - name: Install foreman-installer-katello
+      ansible.builtin.dnf:
+        name: foreman-installer-katello
         state: present
-        backup: yes
-
-    - name: Set hostname to foreman.homelab.com
-      ansible.builtin.hostname:
-        name: foreman.homelab.com
-  tags:
-    - preflight
-    - networking
-
-- name: Handle Katello backup archive
-  block:
-    - name: Ensure rsync is installed on kvm_host
-      ansible.builtin.package:
-        name: rsync
-        state: present
-      delegate_to: kvm_host
-
-    - name: Copy Katello backup from kvm_host
-      ansible.builtin.synchronize:
-        src: "/home/temp/{{ katello_backup_file }}"
-        dest: "/tmp/{{ katello_backup_file }}"
-        mode: push
-        dest_port: 22
-      delegate_to: kvm_host
-
-    - name: Ensure /home/temp directory exists
-      ansible.builtin.file:
-        path: /home/temp
-        state: directory
-        mode: '0755'
-
-    - name: Extract archive to /home/temp
-      ansible.builtin.unarchive:
-        src: "/tmp/{{ katello_backup_file }}"
-        dest: /home/temp/
-        remote_src: yes
-  tags:
-    - restore
-
-# NOTE on restore-foreman-dump whitelist behavior (learned across runs 49-52):
-#
-#   Whitelisting restore-foreman-dump causes foreman-maintain to SKIP that step
-#   entirely in every tested run — it does NOT merely suppress the exit code.
-#   Not whitelisting it causes foreman-maintain to exit rc=1 on the FK violation
-#   in the backup, failing the Ansible task even though pg_restore warns only.
-#
-#   Resolution: whitelist restore-foreman-dump so foreman-maintain handles all
-#   other steps (candlepin, pulpcore, configs, pulp data), then immediately
-#   after we manually run pg_restore for the foreman dump ourselves.
-- name: Restore Katello backup via foreman-maintain (skips foreman dump intentionally)
-  ansible.builtin.command:
-    cmd: >-
-      foreman-maintain restore /home/temp/{{ katello_backup_dir }}
-      --assumeyes
-      --whitelist=restore-validate-backup,restore-validate-interfaces,restore-validate-hostname
-  tags:
-    - restore
-
-# FIX: foreman-maintain stops PostgreSQL at the end of its restore sequence.
-#      We must restart it before running pg_restore manually.
-- name: Start PostgreSQL before manual foreman dump restore
-  ansible.builtin.systemd:
-    name: postgresql
-    state: started
-  tags:
-    - restore
-
-# FIX: Manually restore the foreman PostgreSQL dump because foreman-maintain
-#      always SKIPS restore-foreman-dump when it is whitelisted. The dump
-#      contains one known FK violation (content_facet_id=45 orphan from an
-#      online backup race condition) which causes pg_restore to exit rc=1 —
-#      this is expected and safe. The orphaned row is cleaned up below.
-- name: Manually restore foreman PostgreSQL dump
-  ansible.builtin.shell: |
-    sudo -u postgres pg_restore -C -d postgres \
-      /home/temp/{{ katello_backup_dir }}/foreman.dump
-  register: foreman_pg_restore
-  failed_when: foreman_pg_restore.rc > 1
-  changed_when: true
-  tags:
-    - restore
-
-- name: Post-restore configuration fixes
-  block:
-    # NOTE: Both pulpcore-plugin(python) and python3-pulp-python may not be
-    #       available in all repo configurations. Safe to ignore — the dependency
-    #       is already satisfied by another installed package in most cases.
-    - name: Resolve pulpcore-plugin(python) dependency manually
-      ansible.builtin.shell: |
-        dnf install -y 'pulpcore-plugin(python)' || dnf install -y python3-pulp-python
-      register: dnf_fix
-      failed_when: false
-
-    - name: Fix interface names in installer answers
-      ansible.builtin.replace:
-        path: /etc/foreman-installer/scenarios.d/katello-answers.yaml
-        regexp: '(interface|dns_interface|dhcp_interface):.*'
-        replace: '\1: {{ ansible_default_ipv4.interface }}'
-  tags:
-    - restore
-
-- name: Finalize restore and reconcile services
-  block:
-    - name: Ensure PostgreSQL is running after foreman-maintain
-      ansible.builtin.systemd:
-        name: postgresql
-        state: started
-
-    # FIX: Verify the foreman database actually exists before proceeding.
-    #      Catches the case where restore-foreman-dump was silently skipped.
-    - name: Verify foreman database exists before proceeding
-      ansible.builtin.shell: |
-        sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw foreman
-      register: db_check
-      failed_when: db_check.rc != 0
-      changed_when: false
-
-    # FIX: Clean up orphaned FK record left by online backup race condition.
-    #      Uses ignore_errors because the row may or may not be present.
-    - name: Clean up orphaned katello_content_view_environment_content_facets records
-      ansible.builtin.shell: |
-        sudo -u postgres psql -d foreman -c "
-          DELETE FROM katello_content_view_environment_content_facets
-          WHERE content_facet_id NOT IN (SELECT id FROM katello_content_facets);
-        "
-      register: fk_cleanup
-      changed_when: "'DELETE' in fk_cleanup.stdout"
-      ignore_errors: yes
-
-    - name: Run database migrations
-      ansible.builtin.command: foreman-rake db:migrate
-      register: db_migrate_result
-      failed_when: db_migrate_result.rc != 0
-
-    # FIX: db:seed fails with NoMethodError on Filter#override= if the column
-    #      is missing from the restored schema. Ensure it exists before seeding.
-    - name: Ensure filters table has override column
-      ansible.builtin.shell: |
-        sudo -u postgres psql -d foreman -c "
-          ALTER TABLE filters ADD COLUMN IF NOT EXISTS override boolean DEFAULT false;
-        "
-      changed_when: false
-
-    - name: Run database seeds
-      ansible.builtin.command: foreman-rake db:seed
-      register: db_seed_result
-      failed_when: db_seed_result.rc != 0
-
-    # FIX: Start Redis before apipie cache rebuild. Without it, foreman-rake
-    #      opens hundreds of sockets and hits EMFILE (too many open files).
-    - name: Start Redis before apipie cache rebuild
-      ansible.builtin.systemd:
-        name: redis
-        state: started
-
-    # NEW FIX: Nuke the Redis cache containing stale serialized Ruby objects
-    #          from the older OS/Backup.
-    - name: Flush Redis cache to prevent Ruby Marshal compatibility issues
-      ansible.builtin.command: redis-cli flushall
-      register: redis_flush
-      changed_when: "'OK' in redis_flush.stdout"
-
-    # FIX: Run foreman-installer BEFORE cache wipe. The installer restarts
-    #      services and runs upgrade:run rake tasks which can regenerate or
-    #      corrupt cache state. All caches must be wiped AFTER the installer
-    #      completes to ensure a clean slate for the running web process.
-    - name: Run foreman-installer to reconcile configuration
-      ansible.builtin.command:
-        cmd: >-
-          foreman-installer
-          --foreman-proxy-dhcp-interface={{ ansible_default_ipv4.interface }}
-          --foreman-proxy-dns-interface={{ ansible_default_ipv4.interface }}
-          --foreman-proxy-content-enable-python=false
-          --foreman-proxy-register-in-foreman=false
-          --foreman-register-in-foreman=false
-          --skip-checks-i-know-better
-      register: foreman_installer_result
-      failed_when: foreman_installer_result.rc != 0
-
-    # FIX: Nuke the ENTIRE tmp/ directory, not just tmp/cache. Marshal files
-    #      can exist anywhere under tmp/ (pids, sockets subdirs included) and
-    #      survive a partial cache wipe. Also clear /var/cache/foreman which
-    #      holds additional serialized state that can carry stale Marshal data
-    #      from the backup's Ruby version.
-    - name: Nuke entire Foreman tmp directory
-      ansible.builtin.file:
-        path: /usr/share/foreman/tmp
-        state: absent
-
-    - name: Recreate Foreman tmp directory structure
-      ansible.builtin.file:
-        path: "{{ item }}"
-        state: directory
-        owner: foreman
-        group: foreman
-        mode: '0755'
-      loop:
-        - /usr/share/foreman/tmp
-        - /usr/share/foreman/tmp/cache
-        - /usr/share/foreman/tmp/pids
-        - /usr/share/foreman/tmp/sockets
-
-    - name: Nuke apipie cache directory
-      ansible.builtin.file:
-        path: /usr/share/foreman/public/apipie-cache
-        state: absent
-
-    - name: Recreate apipie cache directory
-      ansible.builtin.file:
-        path: /usr/share/foreman/public/apipie-cache
-        state: directory
-        owner: foreman
-        group: foreman
-        mode: '0755'
-
-    # FIX: Clear /var/cache/foreman which holds additional serialized state
-    #      that can carry stale Marshal data from the backup's Ruby version.
-    - name: Nuke Foreman var cache
-      ansible.builtin.file:
-        path: /var/cache/foreman
-        state: absent
-
-    - name: Recreate Foreman var cache
-      ansible.builtin.file:
-        path: /var/cache/foreman
-        state: directory
-        owner: foreman
-        group: foreman
-        mode: '0755'
-
-    # FIX: Restart ALL services after the full cache wipe so that the running
-    #      web process starts cold with no in-memory stale state, then let it
-    #      stabilize before rebuilding the apipie cache. This ensures the rake
-    #      process and httpd share the same Ruby runtime Marshal version when
-    #      writing and reading cache files.
-    - name: Restart all Foreman services after cache wipe
-      ansible.builtin.command: foreman-maintain service restart
-      register: service_restart
-      failed_when: service_restart.rc != 0
-
-    - name: Wait for services to stabilize before rebuilding apipie cache
-      ansible.builtin.pause:
-        seconds: 45
-
-    # FIX: Rebuild apipie cache AFTER the service restart and stabilization
-    #      pause. This ensures foreman-rake runs against the same live Ruby
-    #      environment as the httpd web process, preventing Marshal version
-    #      mismatches between the writer (rake) and reader (httpd).
-    - name: Rebuild apipie cache
-      ansible.builtin.command: foreman-rake apipie:cache:index
-
-    # FIX: Wait for the Foreman API to be healthy before declaring success.
-    - name: Wait for Foreman API to become healthy
-      ansible.builtin.uri:
-        url: "https://foreman.homelab.com/api/v2/hosts"
-        method: GET
-        validate_certs: no
-        status_code: 200
-      register: api_check
-      retries: 10
-      delay: 30
-      until: api_check.status == 200
-  tags:
-    - restore
