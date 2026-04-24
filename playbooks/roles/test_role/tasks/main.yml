@@ -1,9 +1,7 @@
 - name: Test connectivity to google.com via proxy
   ansible.builtin.shell: |
-    export http_proxy=http://192.168.0.61:83
-    export https_proxy=http://192.168.0.61:83
-    export no_proxy=localhost,127.0.0.1,192.168.0.0/24,*.homelab.com
     curl -s -o /dev/null -w "%{http_code}" http://google.com
+  environment: "{{ proxy_env }}"
   register: ping_result
   changed_when: false
 
