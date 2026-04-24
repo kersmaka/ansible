@@ -4,9 +4,13 @@
   ansible.builtin.debug:
     msg: "this is a test role"
 
-- name: Test connectivity to google.com
+- name: Test connectivity to google.com via proxy
   ansible.builtin.command:
     cmd: curl -s -o /dev/null -w "%{http_code}" http://google.com
+  environment:
+    http_proxy: http://192.168.0.61:83
+    https_proxy: http://192.168.0.61:83
+    no_proxy: localhost,127.0.0.1,192.168.0.0/24,*.homelab.com
   register: ping_result
   changed_when: false
 
