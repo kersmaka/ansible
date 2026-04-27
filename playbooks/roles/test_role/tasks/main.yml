@@ -1,10 +1,6 @@
-- name: Test connectivity to google.com via proxy
-  ansible.builtin.shell: |
-    curl -s -o /dev/null -w "%{http_code}" http://google.com
-  environment: "{{ proxy_env }}"
-  register: ping_result
-  changed_when: false
+---
+# tasks file for test_role
 
-- name: Show connectivity result
+- name: Print a message to the console
   ansible.builtin.debug:
-    msg: "google.com responded with HTTP {{ ping_result.stdout }}"
+    msg: "this is a test role"
