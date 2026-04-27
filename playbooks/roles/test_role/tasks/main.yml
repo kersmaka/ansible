@@ -1,6 +1,15 @@
 ---
 # tasks file for test_role
-
 - name: Print a message to the console
   ansible.builtin.debug:
     msg: "this is a test role"
+
+- name: Test connectivity to google.com
+  ansible.builtin.command:
+    cmd: curl -s -o /dev/null -w "%{http_code}" http://google.com
+  register: ping_result
+  changed_when: false
+
+- name: Show connectivity result
+  ansible.builtin.debug:
+    msg: "google.com responded with HTTP {{ ping_result.stdout }}"
