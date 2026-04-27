@@ -1,2 +1,8 @@
 ---
 # vars file for test_role
+NO_PROXY: localhost,127.0.0.1,192.168.0.0/24,*.homelab.com
+no_proxy: localhost,127.0.0.1,192.168.0.0/24,*.homelab.com
+HTTP_PROXY: http://192.168.0.61:83
+http_proxy: http://192.168.0.61:83
+HTTPS_PROXY: http://192.168.0.61:83
+https_proxy: http://192.168.0.61:83
