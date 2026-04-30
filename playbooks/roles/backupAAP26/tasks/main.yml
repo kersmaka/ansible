@@ -47,7 +47,7 @@
     - name: Create DR tarball containing all backup artifacts
       shell: |
         tar -czf /home/aap/ansibleDR.tar.gz \
-          -C {{ aap_bundle_path | default('/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64') }} \
+          -C {{ aap_bundle_path | default('/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-7-x86_64') }} \
             backups \
             inventory \
             group_vars \
