@@ -27,7 +27,7 @@
         ansible-playbook -i inventory ansible.containerized_installer.backup \
           --vault-password-file /home/aap/.vault_pass
       args:
-        chdir: "{{ aap_bundle_path | default('/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64') }}"
+        chdir: "{{ aap_bundle_path | default('/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-7-x86_64') }}"
       become_user: aap
       environment:
         XDG_RUNTIME_DIR: "/run/user/{{ aap_uid.stdout }}"
