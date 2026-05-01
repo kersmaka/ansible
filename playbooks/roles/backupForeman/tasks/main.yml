@@ -1,0 +1,69 @@
+---
+- name: Ensure backup directory exists
+  ansible.builtin.file:
+    path: "{{ backup_base_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+- name: Check foreman-maintain is available
+  ansible.builtin.command: which foreman-maintain
+  register: fm_check
+  changed_when: false
+  failed_when: fm_check.rc != 0
+- name: Run foreman-maintain backup (online, no Pulp content)
+  ansible.builtin.command: >
+    foreman-maintain backup online
+    --output-dir {{ backup_base_dir }}
+    --assumeyes
+  when:
+    - backup_type == 'online'
+    - not include_pulp_content
+  register: backup_result
+  changed_when: true
+- name: Run foreman-maintain backup (online, with Pulp content)
+  ansible.builtin.command: >
+    foreman-maintain backup online
+    --output-dir {{ backup_base_dir }}
+    --assumeyes
+    --include-db-dumps
+    --skip-pulp-content false
+  when:
+    - backup_type == 'online'
+    - include_pulp_content
+  register: backup_result
+  changed_when: true
+- name: Run foreman-maintain backup (offline)
+  ansible.builtin.command: >
+    foreman-maintain backup offline
+    --output-dir {{ backup_base_dir }}
+    --assumeyes
+  when: backup_type == 'offline'
+  register: backup_result
+  changed_when: true
+- name: Show backup output
+  ansible.builtin.debug:
+    var: backup_result.stdout_lines
+- name: Find backup directories older than retention period
+  ansible.builtin.find:
+    paths: "{{ backup_base_dir }}"
+    file_type: directory
+    age: "{{ backup_keep_days }}d"
+    recurse: false
+  register: old_backups
+- name: Remove old backups beyond retention period
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ old_backups.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+- name: List current backups
+  ansible.builtin.find:
+    paths: "{{ backup_base_dir }}"
+    file_type: directory
+    recurse: false
+  register: current_backups
+- name: Show retained backups
+  ansible.builtin.debug:
+    msg: "{{ current_backups.files | map(attribute='path') | sort | list }}"

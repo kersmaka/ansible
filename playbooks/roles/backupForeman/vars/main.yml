@@ -1,0 +1,6 @@
+---
+# vars file for buildPodman
+backup_base_dir: /var/backups/foreman
+backup_type: online          # online | offline
+backup_keep_days: 7          # days of backups to retain
+include_pulp_content: true # set true to include Pulp content (can be very large)
