@@ -1,0 +1,33 @@
+- name: Create custom role for Project and Template management
+  ansible.platform.role_definition:
+    name: "Project and Template Creator"
+    description: "Allows user to create projects, templates, and execute them."
+    content_type: awx.organization
+    permissions:
+      - awx.add_project
+      - awx.add_jobtemplate
+      - awx.view_organization
+      - awx.change_project      # Often needed alongside add_project
+      - awx.view_project        # Required to see projects after creation
+    state: present
+    aap_hostname: "{{ aap_hostname }}"
+    aap_username: "{{ aap_username }}"
+    aap_password: "{{ aap_password }}"
+
+- name: Get organization ID
+  ansible.platform.organization_info:
+    name: "Your-Organization-Name"
+    aap_hostname: "{{ aap_hostname }}"
+    aap_username: "{{ aap_username }}"
+    aap_password: "{{ aap_password }}"
+  register: org_info
+
+- name: Assign custom role to user
+  ansible.platform.role_user_assignment:
+    user: "target_username"
+    role_definition: "Project and Template Creator"
+    object_id: "{{ org_info.id }}"   # Use resolved numeric ID
+    state: present
+    aap_hostname: "{{ aap_hostname }}"
+    aap_username: "{{ aap_username }}"
+    aap_password: "{{ aap_password }}"
