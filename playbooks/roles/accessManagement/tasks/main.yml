@@ -7,26 +7,35 @@
       - awx.add_project
       - awx.add_jobtemplate
       - awx.view_organization
-      - awx.change_project      # Often needed alongside add_project
-      - awx.view_project        # Required to see projects after creation
+      - awx.change_project
+      - awx.view_project
     state: present
     aap_hostname: "{{ aap_hostname }}"
     aap_username: "{{ aap_username }}"
     aap_password: "{{ aap_password }}"
 
-- name: Get organization ID
-  ansible.platform.organization_info:
-    name: "Your-Organization-Name"
-    aap_hostname: "{{ aap_hostname }}"
-    aap_username: "{{ aap_username }}"
-    aap_password: "{{ aap_password }}"
-  register: org_info
+- name: Get organization ID via API
+  ansible.builtin.uri:
+    url: "https://{{ aap_hostname }}/api/v2/organizations/?name={{ org_name | urlencode }}"
+    method: GET
+    user: "{{ aap_username }}"
+    password: "{{ aap_password }}"
+    force_basic_auth: true
+    validate_certs: false          # Set to true in production
+    return_content: true
+    status_code: 200
+  register: org_lookup
+
+- name: Fail if organization not found
+  ansible.builtin.fail:
+    msg: "Organization '{{ org_name }}' not found in AAP."
+  when: org_lookup.json.count == 0
 
 - name: Assign custom role to user
   ansible.platform.role_user_assignment:
     user: "target_username"
     role_definition: "Project and Template Creator"
-    object_id: "{{ org_info.id }}"   # Use resolved numeric ID
+    object_id: "{{ org_lookup.json.results[0].id }}"
     state: present
     aap_hostname: "{{ aap_hostname }}"
     aap_username: "{{ aap_username }}"
