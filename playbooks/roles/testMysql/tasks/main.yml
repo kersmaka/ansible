@@ -5,10 +5,7 @@
       ansible.builtin.validate_argument_spec:
         argument_spec: {}
         provided_arguments: {}
-      # This forces Ansible to look up the module dynamically at runtime
-      vars:
-        ansible_callback_whitelist: []
-      module_to_validate: ansible.mysql.mysql_info
+        module_to_validate: ansible.mysql.mysql_info  # <-- Fixed indentation
       register: mysql_test_output
 
   rescue:
@@ -17,7 +14,7 @@
         msg: >
           {% if ansible_failed_result is defined and ('could not be found' in ansible_failed_result.msg or 'not found' in ansible_failed_result.msg) %}
             CRITICAL FAILURE: The ansible.mysql collection cannot be found 
-            by your current environment execution path. Check your collections_path or role meta.
+            by your current environment execution path.
           {% else %}
             SUCCESS: The collection is installed and working!
           {% endif %}
