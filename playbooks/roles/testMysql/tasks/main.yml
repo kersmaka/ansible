@@ -1,0 +1,24 @@
+- name: Try to load a module from the mysql collection
+  block:
+    - name: Check if mysql modules can be resolved
+    # Using an invalid argument style on purpose just to see if the 
+    # module code resolves, or checking configuration options.
+      ansible.mysql.mysql_info:
+        connect_timeout: 1
+      register: mysql_test_output
+    
+      rescue:
+    - name: Analyze the failure type
+      ansible.builtin.debug:
+        msg: >
+          {% if 'could not be found' in ansible_failed_result.msg %}
+            CRITICAL FAILURE: The ansible.mysql collection cannot be found 
+            by your current environment execution path. Check your collections_path.
+          {% else %}
+            SUCCESS: The collection is installed and working! (The task failed 
+            on connection/credentials as expected, but the module was successfully found).
+          {% endif %}
+
+    - name: Print raw error message for confirmation
+      ansible.builtin.debug:
+        var: ansible_failed_result.msg
