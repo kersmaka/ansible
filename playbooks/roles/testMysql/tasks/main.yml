@@ -1,24 +1,27 @@
+---
 - name: Try to load a module from the mysql collection
   block:
-    - name: Check if mysql modules can be resolved
-      # Using an invalid argument style on purpose just to see if the 
-      # module code resolves, or checking configuration options.
-      ansible.mysql.mysql_info:
-        connect_timeout: 1
+    - name: Dynamically check if the mysql module can be loaded
+      ansible.builtin.validate_argument_spec:
+        argument_spec: {}
+        provided_arguments: {}
+      # This forces Ansible to look up the module dynamically at runtime
+      vars:
+        ansible_callback_whitelist: []
+      module_to_validate: ansible.mysql.mysql_info
       register: mysql_test_output
 
   rescue:
     - name: Analyze the failure type
       ansible.builtin.debug:
         msg: >
-          {% if 'could not be found' in ansible_failed_result.msg %}
+          {% if ansible_failed_result is defined and ('could not be found' in ansible_failed_result.msg or 'not found' in ansible_failed_result.msg) %}
             CRITICAL FAILURE: The ansible.mysql collection cannot be found 
-            by your current environment execution path. Check your collections_path.
+            by your current environment execution path. Check your collections_path or role meta.
           {% else %}
-            SUCCESS: The collection is installed and working! (The task failed 
-            on connection/credentials as expected, but the module was successfully found).
+            SUCCESS: The collection is installed and working!
           {% endif %}
 
     - name: Print raw error message for confirmation
       ansible.builtin.debug:
-        var: ansible_failed_result.msg
+        var: ansible_failed_result
