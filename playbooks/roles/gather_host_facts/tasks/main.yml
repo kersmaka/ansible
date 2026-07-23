@@ -1,0 +1,18 @@
+---
+- name: Ensure output directory exists on control node
+  ansible.builtin.file:
+    path: "{{ facts_output_dir | default('./host_facts') }}"
+    state: directory
+    mode: '0755'
+  delegate_to: localhost
+  run_once: true
+
+- name: Gather facts explicitly if not already collected
+  ansible.builtin.setup:
+
+- name: Write host facts to a local JSON file
+  ansible.builtin.copy:
+    content: "{{ ansible_facts | to_nice_json }}"
+    dest: "{{ facts_output_dir | default('./host_facts') }}/{{ inventory_hostname }}.json"
+    mode: '0644'
+  delegate_to: localhost
