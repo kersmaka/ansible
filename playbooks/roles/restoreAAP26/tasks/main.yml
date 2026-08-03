@@ -33,7 +33,7 @@
   become_user: aap
   shell: >
     tar -czf /home/aap/aap-backup-manual.tar.gz
-    /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64/backups/
+    /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-7-x86_64/backups/
   args:
     executable: /bin/bash
 
@@ -55,7 +55,7 @@
 # ── 1. Prepare the bundle backup directory ────────────────────────────────
 - name: Ensure the backups directory exists in the bundle
   file:
-    path: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/backups
+    path: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-7-x86_64/backups
     state: directory
     owner: aap
     group: aap
@@ -65,9 +65,9 @@
 - name: Extract manual backup into the bundle backups folder
   unarchive:
     src: /home/aap/aap-backup-manual.tar.gz
-    dest: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/backups/
+    dest: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-7-x86_64/backups/
     remote_src: yes
-    extra_opts: ['--strip-components=4']  # Strips: home/aap/<bundle-2.6-1.1>/backups/ leaving files flat
+    extra_opts: ['--strip-components=4']  # Strips: home/aap/<bundle-2.6-7>/backups/ leaving files flat
     owner: aap
     group: aap
 
@@ -78,7 +78,7 @@
       mv "$file" "${file//ansible.homelab.com/ansiblebackup2.homelab.com}"
     done
   args:
-    chdir: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/backups/
+    chdir: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-7-x86_64/backups/
 
 # ── 3. Enable lingering for aap user ───────────────────────────────────────
 - name: Enable lingering for aap user
@@ -94,9 +94,9 @@
   shell: >
     ansible-playbook -i /home/aap/setup/inventory
     ansible.containerized_installer.restore
-    -e "backup_dir=/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64"
+    -e "backup_dir=/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-7-x86_64"
   args:
-    chdir: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64
+    chdir: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-7-x86_64
   become_user: aap
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ aap_uid.stdout }}"
