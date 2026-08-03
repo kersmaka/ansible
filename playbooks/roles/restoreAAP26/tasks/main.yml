@@ -103,7 +103,6 @@
     rsync_opts:
       - "--exclude=backups"
   delegate_to: ansible.homelab.com
-  become_user: aap
 
 - name: Execute Containerized Restore
   shell: >
