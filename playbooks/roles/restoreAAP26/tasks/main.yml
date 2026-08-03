@@ -96,6 +96,15 @@
   register: aap_uid
   changed_when: false
 
+- name: Sync bundle scaffolding (ansible.cfg, inventory, collections) to restore target
+  ansible.posix.synchronize:
+    src: "/home/aap/{{ aap_bundle_dir }}/"
+    dest: "/home/aap/{{ aap_bundle_dir }}/"
+    rsync_opts:
+      - "--exclude=backups"
+  delegate_to: ansible.homelab.com
+  become_user: aap
+
 - name: Execute Containerized Restore
   shell: >
     ansible-playbook -i /home/aap/setup/inventory
