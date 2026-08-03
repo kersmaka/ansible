@@ -5,6 +5,14 @@
   delegate_to: ansible.homelab.com
   become_user: aap
 
+- name: Ensure aap user exists on ansiblebackup2
+  ansible.builtin.user:
+    name: aap
+    state: present
+    create_home: yes
+    shell: /bin/bash
+  become: true    
+
 - name: Inject ansible aap public key into ansiblebackup2 authorized_keys
   authorized_key:
     user: aap
