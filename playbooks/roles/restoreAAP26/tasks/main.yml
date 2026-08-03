@@ -102,6 +102,7 @@
     dest: "aap@ansiblebackup2.homelab.com:/home/aap/{{ aap_bundle_dir }}/"
     rsync_opts:
       - "--exclude=backups"
+  become: false
   delegate_to: ansible.homelab.com
 
 - name: Execute Containerized Restore
