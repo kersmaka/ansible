@@ -11,7 +11,15 @@
     state: present
     create_home: yes
     shell: /bin/bash
-  become: true  
+  become: true
+
+- name: Grant aap passwordless sudo on restore target
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/aap
+    content: "aap ALL=(ALL) NOPASSWD:ALL\n"
+    mode: '0440'
+    validate: 'visudo -cf %s'
+  become: true    
 
 - name: Ensure ansible-core is installed on restore target
   ansible.builtin.package:
