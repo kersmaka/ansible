@@ -109,10 +109,13 @@
   shell: >
     ansible-playbook -i /home/aap/setup/inventory
     ansible.containerized_installer.restore
-    -e "backup_dir=/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-7-x86_64"
+    -e "backup_dir=/home/aap/{{ aap_bundle_dir }}"
+    -e "registry_username={{ registry_username }}"
+    -e "registry_password={{ registry_password }}"
   args:
-    chdir: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-7-x86_64
+    chdir: /home/aap/{{ aap_bundle_dir }}
   become_user: aap
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ aap_uid.stdout }}"
     DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ aap_uid.stdout }}/bus"
+
