@@ -11,7 +11,13 @@
     state: present
     create_home: yes
     shell: /bin/bash
-  become: true    
+  become: true  
+
+- name: Ensure ansible-core is installed on restore target
+  ansible.builtin.package:
+    name: ansible-core
+    state: present
+  become: true
 
 - name: Inject ansible aap public key into ansiblebackup2 authorized_keys
   authorized_key:
