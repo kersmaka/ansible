@@ -27,7 +27,6 @@
       - ansible-core
       - podman
       - containers-common
-      - ansible-builder
     state: present
   become: true
 
