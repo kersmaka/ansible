@@ -21,9 +21,13 @@
     validate: 'visudo -cf %s'
   become: true    
 
-- name: Ensure ansible-core is installed on restore target
+- name: Ensure required packages are installed on restore target
   ansible.builtin.package:
-    name: ansible-core
+    name:
+      - ansible-core
+      - podman
+      - containers-common
+      - ansible-builder
     state: present
   become: true
 
