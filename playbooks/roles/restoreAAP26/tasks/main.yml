@@ -107,7 +107,7 @@
 
 - name: Execute Containerized Restore
   shell: >
-    ansible-playbook -i /home/aap/setup/inventory
+    ansible-playbook -i /home/aap/{{ aap_bundle_dir }}/inventory
     ansible.containerized_installer.restore
     -e "backup_dir=/home/aap/{{ aap_bundle_dir }}"
     -e "registry_username={{ registry_username }}"
