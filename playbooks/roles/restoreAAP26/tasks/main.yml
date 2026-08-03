@@ -99,7 +99,7 @@
 - name: Sync bundle scaffolding (ansible.cfg, inventory, collections) to restore target
   ansible.posix.synchronize:
     src: "/home/aap/{{ aap_bundle_dir }}/"
-    dest: "/home/aap/{{ aap_bundle_dir }}/"
+    dest: "aap@ansiblebackup2.homelab.com:/home/aap/{{ aap_bundle_dir }}/"
     rsync_opts:
       - "--exclude=backups"
   delegate_to: ansible.homelab.com
