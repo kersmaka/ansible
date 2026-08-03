@@ -105,6 +105,19 @@
   become: false
   delegate_to: ansible.homelab.com
 
+- name: Update inventory hostname references for restore target
+  ansible.builtin.replace:
+    path: /home/aap/{{ aap_bundle_dir }}/inventory
+    regexp: 'ansible\.homelab\.com'
+    replace: 'ansiblebackup2.homelab.com'
+
+- name: Sync SSL directory to restore target
+  ansible.posix.synchronize:
+    src: "/home/aap/ssl/"
+    dest: "aap@ansiblebackup2.homelab.com:/home/aap/ssl/"
+  become: false
+  delegate_to: ansible.homelab.com
+
 - name: Execute Containerized Restore
   shell: >
     ansible-playbook -i /home/aap/{{ aap_bundle_dir }}/inventory
