@@ -108,7 +108,6 @@
   register: aap_uid
   changed_when: false
  
----
 - name: Execute AAP Containerized Installer
   import_playbook: ansible.containerized_installer.install
   vars:
