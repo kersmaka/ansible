@@ -129,15 +129,12 @@
   become: false
   delegate_to: ansible.homelab.com
 
-- name: Execute Containerized Restore
-  shell: >
-    ansible-playbook -i /home/aap/setup/inventory
-    ansible.containerized_installer.restore
-    -e "backup_dir=/home/aap/{{ aap_bundle_dir }}"
+- name: Execute Containerized Installer
+  shell: ansible-playbook -i /home/aap/setup/inventory ansible.containerized_installer.install
   args:
     chdir: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64
+  become: true
   become_user: aap
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ aap_uid.stdout }}"
     DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ aap_uid.stdout }}/bus"
-
