@@ -107,6 +107,13 @@
   command: id -u aap
   register: aap_uid
   changed_when: false
+
+- name: Allow aap passwordless sudo
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/aap
+    content: "aap ALL=(ALL) NOPASSWD: ALL\n"
+    mode: '0440'
+    validate: 'visudo -cf %s'
  
 - name: Execute Containerized Installer
   shell: ansible-playbook -i /home/aap/setup/inventory ansible.containerized_installer.install
