@@ -32,7 +32,7 @@
         state: absent
 
     - name: Inject Configuration, Packages, and All SSH Keys
-      ansible.builtin.c ommand: >
+      ansible.builtin.command: >
         virt-customize -a {{ dest_image }}
         --hostname {{ vm_name }}
         --run-command "subscription-manager register --force --username {{ vault_rh_user }} --password '{{ vault_rh_password }}'"
