@@ -5,11 +5,17 @@
     state: directory
     mode: '0755'
 
+# rc != 0 is the expected "VM doesn't exist yet" case, so don't let it show as a failure.
 - name: Check if VM already exists
   ansible.builtin.command: virsh dominfo {{ vm_name }}
   register: vm_check
-  ignore_errors: true
+  failed_when: false
   changed_when: false
+
+- name: Report that the VM already exists
+  ansible.builtin.debug:
+    msg: "{{ vm_name }} already exists, skipping provisioning. Destroy and undefine it first to rebuild."
+  when: vm_check.rc == 0
 
 - name: Copy and Configure VM
   block:
@@ -31,6 +37,8 @@
         path: "{{ dest_image }}.orig"
         state: absent
 
+    # no_log: the RH password is part of the command line and would be printed on failure.
+    # Flip it to false temporarily if you need virt-customize's error output.
     - name: Inject Configuration (Hostname, Subscription, Updates)
       ansible.builtin.command: >
         virt-customize -a {{ dest_image }}
@@ -38,6 +46,7 @@
         --run-command "subscription-manager register --force --username {{ vault_rh_user }} --password '{{ vault_rh_password }}'"
         --run-command "dnf update -y"
         --run-command "dnf install vim -y"
+      no_log: true
 
     - name: Run virt-install
       ansible.builtin.command: >
@@ -49,6 +58,14 @@
       ansible.builtin.pause:
         seconds: 60
 
+    # A leftover /etc/hosts entry makes ipCheck.sh print a hostname instead of an IP.
+    - name: Remove stale /etc/hosts entry for the new VM
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        regexp: '^\S+\s+{{ vm_name | regex_escape }}\s*$'
+        state: absent
+      become: true
+
     - name: Get VM IP
       ansible.builtin.shell: "/home/tools/ipCheck.sh {{ vm_name }}"
       register: ip_output
@@ -57,13 +74,34 @@
       ansible.builtin.debug:
         msg: "{{ ip_output.stdout }}"
 
+    # Parse the IP once, from this VM's block of the output only (blocks are separated by '---'),
+    # so another VM's address can never be picked up by mistake. The patterns deliberately use
+    # [0-9] and [.] instead of backslash escapes, which template differently across Ansible versions.
+    - name: Set VM IP fact
+      ansible.builtin.set_fact:
+        vm_ip: >-
+          {{ ip_output.stdout.split('---')
+             | select('search', 'VM: ' ~ (vm_name | regex_escape) ~ '([^A-Za-z0-9_.-]|$)')
+             | map('regex_findall', 'IP: ([0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3})')
+             | flatten
+             | first
+             | default('', true) }}
+
+    - name: Verify a numeric IP was found for the new VM
+      ansible.builtin.assert:
+        that: vm_ip | length > 0
+        fail_msg: >-
+          No numeric IP found for {{ vm_name }} in the ipCheck.sh output. If nmap reverse-resolved
+          the address to a hostname, check /etc/hosts on the KVM host for a stale entry for that address.
+        quiet: true
+
     - name: Add new VM to /etc/hosts on kvm_host
       ansible.builtin.lineinfile:
         path: /etc/hosts
-        regexp: ".*{{ vm_name }}$"
-        line: "{{ ip_output.stdout | regex_search('IP: (\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})', '\\1') | first }}    {{ vm_name }}"
+        regexp: '^\S+\s+{{ vm_name | regex_escape }}\s*$'
+        line: "{{ vm_ip }}    {{ vm_name }}"
         state: present
-      become: yes
+      become: true
 
     - name: Ensure .ssh directory exists for runner
       ansible.builtin.file:
@@ -81,12 +119,22 @@
         name: sshpass
         state: present
 
+    # A reused DHCP address or rebuilt VM has a new host key. ssh refuses password auth when a
+    # conflicting key is on file, even with StrictHostKeyChecking=no, so clear old entries first.
+    - name: Remove stale host keys for the new VM
+      ansible.builtin.known_hosts:
+        name: "{{ item.0 }}"
+        path: "{{ item.1 }}"
+        state: absent
+      loop: "{{ [vm_ip, vm_name] | product(['/root/.ssh/known_hosts', '/home/runner/.ssh/known_hosts']) | list }}"
+
     - name: Bootstrap SSH trust to new VM
       ansible.builtin.shell: >
         sshpass -p 'redhat' ssh-copy-id
         -i /home/runner/.ssh/id_rsa.pub
         -o StrictHostKeyChecking=no
-        root@{{ ip_output.stdout | regex_search('IP: (\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})', '\1') | first }}
+        root@{{ vm_ip }}
+      no_log: true
 
     - name: Inject AAP machine credential key into new VM
       ansible.posix.authorized_key:
@@ -96,7 +144,7 @@
       loop:
         - "{{ kvm_host_root_pubkey }}"
         - "{{ aap_container_pubkey }}"
-      delegate_to: "{{ ip_output.stdout | regex_search('IP: (\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})', '\\1') | first }}"
+      delegate_to: "{{ vm_ip }}"
       vars:
         ansible_user: root
         ansible_password: redhat
@@ -119,7 +167,7 @@
         user: root
         state: present
         key: "{{ ansible_host_pubkey['content'] | b64decode }}"
-      delegate_to: "{{ ip_output.stdout | regex_search('IP: (\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})', '\\1') | first }}"
+      delegate_to: "{{ vm_ip }}"
       vars:
         ansible_user: root
         ansible_password: redhat
@@ -130,6 +178,6 @@
 - name: Share IP and VM status with subsequent plays
   ansible.builtin.set_stats:
     data:
-      new_vm_ip: "{{ ip_output.stdout | regex_search('IP: (\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})', '\\1') | first }}"
+      new_vm_ip: "{{ vm_ip }}"
       vm_already_existed: "{{ vm_check.rc == 0 }}"
-  when: vm_check.rc != 0 and ip_output is defined
+  when: vm_check.rc != 0 and vm_ip is defined
