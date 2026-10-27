@@ -5,6 +5,31 @@
   delegate_to: ansible.homelab.com
   become_user: aap
 
+- name: Ensure aap user exists on ansiblebackup2
+  ansible.builtin.user:
+    name: aap
+    state: present
+    create_home: yes
+    shell: /bin/bash
+  become: true
+
+- name: Grant aap passwordless sudo on restore target
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/aap
+    content: "aap ALL=(ALL) NOPASSWD:ALL\n"
+    mode: '0440'
+    validate: 'visudo -cf %s'
+  become: true    
+
+- name: Ensure required packages are installed on restore target
+  ansible.builtin.package:
+    name:
+      - ansible-core
+      - podman
+      - containers-common
+    state: present
+  become: true
+
 - name: Inject ansible aap public key into ansiblebackup2 authorized_keys
   authorized_key:
     user: aap
@@ -25,7 +50,7 @@
   become_user: aap
   shell: >
     tar -czf /home/aap/aap-backup-manual.tar.gz
-    /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-1.1-x86_64/backups/
+    /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-7-x86_64/backups/
   args:
     executable: /bin/bash
 
@@ -47,7 +72,7 @@
 # ── 1. Prepare the bundle backup directory ────────────────────────────────
 - name: Ensure the backups directory exists in the bundle
   file:
-    path: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/backups
+    path: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-7-x86_64/backups
     state: directory
     owner: aap
     group: aap
@@ -57,9 +82,9 @@
 - name: Extract manual backup into the bundle backups folder
   unarchive:
     src: /home/aap/aap-backup-manual.tar.gz
-    dest: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/backups/
+    dest: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-7-x86_64/backups/
     remote_src: yes
-    extra_opts: ['--strip-components=4']  # Strips: home/aap/<bundle-2.6-1.1>/backups/ leaving files flat
+    extra_opts: ['--strip-components=4']  # Strips: home/aap/<bundle-2.6-7>/backups/ leaving files flat
     owner: aap
     group: aap
 
@@ -70,7 +95,7 @@
       mv "$file" "${file//ansible.homelab.com/ansiblebackup2.homelab.com}"
     done
   args:
-    chdir: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64/backups/
+    chdir: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-7-x86_64/backups/
 
 # ── 3. Enable lingering for aap user ───────────────────────────────────────
 - name: Enable lingering for aap user
@@ -82,11 +107,33 @@
   register: aap_uid
   changed_when: false
 
+- name: Sync bundle scaffolding (ansible.cfg, inventory, collections) to restore target
+  ansible.posix.synchronize:
+    src: "/home/aap/{{ aap_bundle_dir }}/"
+    dest: "aap@ansiblebackup2.homelab.com:/home/aap/{{ aap_bundle_dir }}/"
+    rsync_opts:
+      - "--exclude=backups"
+  become: false
+  delegate_to: ansible.homelab.com
+
+- name: Update inventory hostname references for restore target
+  ansible.builtin.replace:
+    path: /home/aap/{{ aap_bundle_dir }}/inventory
+    regexp: 'ansible\.homelab\.com'
+    replace: 'ansiblebackup2.homelab.com'
+
+- name: Sync SSL directory to restore target
+  ansible.posix.synchronize:
+    src: "/home/aap/ssl/"
+    dest: "aap@ansiblebackup2.homelab.com:/home/aap/ssl/"
+  become: false
+  delegate_to: ansible.homelab.com
+
 - name: Execute Containerized Restore
   shell: >
     ansible-playbook -i /home/aap/setup/inventory
     ansible.containerized_installer.restore
-    -e "backup_dir=/home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64"
+    -e "backup_dir=/home/aap/{{ aap_bundle_dir }}"
   args:
     chdir: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64
   become_user: aap
