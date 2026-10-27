@@ -11,16 +11,6 @@
   ignore_errors: true
   changed_when: false
 
-- name: Stop existing VM if running
-  ansible.builtin.command: virsh destroy {{ vm_name }}
-  when: vm_check.rc == 0
-  ignore_errors: true
-
-- name: Undefine existing VM and remove NVRAM/storage definitions
-  ansible.builtin.command: virsh undefine {{ vm_name }} --nvram
-  when: vm_check.rc == 0
-  ignore_errors: true  
-
 - name: Copy and Configure VM
   block:
     - name: Copy qcow2 image
