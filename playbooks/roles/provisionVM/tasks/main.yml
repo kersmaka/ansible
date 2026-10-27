@@ -36,13 +36,13 @@
         virt-customize -a {{ dest_image }}
         --hostname {{ vm_name }}
         --run-command "subscription-manager register --force --username {{ vault_rh_user }} --password '{{ vault_rh_password }}'"
-        --run-command "subscription-manager release --set={{ source_image | regex_search('rhel-(\\d+\\.\\d+)', '\\1') | first }}"
+        --run-command "subscription-manager release --set={{ source_image.split('rhel-')[1].split('-')[0] }}"
         --run-command "dnf update -y"
         --run-command "dnf install vim -y"
         --ssh-inject "root:file:/home/runner/.ssh/id_rsa.pub"
         --ssh-inject "root:file:/root/.ssh/id_rsa.pub"
         --run-command "chmod 700 /root/.ssh"
-
+        
     - name: Run virt-install
       ansible.builtin.command: >
         virt-install --name {{ vm_name }} --ram {{ vm_memory }} --vcpus {{ vm_vcpus }}
