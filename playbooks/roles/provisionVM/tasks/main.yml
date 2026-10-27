@@ -42,7 +42,7 @@
         --ssh-inject "root:file:/home/runner/.ssh/id_rsa.pub"
         --ssh-inject "root:file:/root/.ssh/id_rsa.pub"
         --run-command "chmod 700 /root/.ssh"
-        
+
     - name: Run virt-install
       ansible.builtin.command: >
         virt-install --name {{ vm_name }} --ram {{ vm_memory }} --vcpus {{ vm_vcpus }}
@@ -79,18 +79,6 @@
       ansible.builtin.command:
         cmd: ssh-keygen -t rsa -b 4096 -f /home/runner/.ssh/id_rsa -N ""
         creates: /home/runner/.ssh/id_rsa
-
-    - name: Install sshpass
-      ansible.builtin.package:
-        name: sshpass
-        state: present
-
-    - name: Bootstrap SSH trust to new VM
-      ansible.builtin.shell: >
-        sshpass -p 'redhat' ssh-copy-id
-        -i /home/runner/.ssh/id_rsa.pub
-        -o StrictHostKeyChecking=no
-        root@{{ ip_output.stdout | regex_search('IP: (\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})', '\1') | first }}
 
     - name: Inject AAP machine credential key into new VM
       ansible.posix.authorized_key:
