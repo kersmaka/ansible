@@ -44,7 +44,8 @@
         --run-command "echo '{{ kvm_host_root_pubkey }}' >> /root/.ssh/authorized_keys"
         --run-command "echo '{{ aap_container_pubkey }}' >> /root/.ssh/authorized_keys"
         --run-command "chmod 600 /root/.ssh/authorized_keys"
-
+        --run-command "restorecon -R -v /root/.ssh"
+        
     - name: Run virt-install
       ansible.builtin.command: >
         virt-install --name {{ vm_name }} --ram {{ vm_memory }} --vcpus {{ vm_vcpus }}
