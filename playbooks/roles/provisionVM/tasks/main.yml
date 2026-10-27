@@ -39,10 +39,17 @@
 
     # no_log: the RH password is part of the command line and would be printed on failure.
     # Flip it to false temporarily if you need virt-customize's error output.
-    - name: Inject Configuration (Hostname, Subscription, Updates)
+    # The root password and the sshd drop-in make the bootstrap below independent of whatever the
+    # base image ships with. The 00- prefix makes sshd read it before any other drop-in, and sshd
+    # uses the first value it sees for each option. Set vm_root_password (e.g. from the vault)
+    # to override the default.
+    - name: Inject Configuration (Hostname, Root Login, Subscription, Updates)
       ansible.builtin.command: >
         virt-customize -a {{ dest_image }}
         --hostname {{ vm_name }}
+        --root-password 'password:{{ vm_root_password | default('redhat') }}'
+        --run-command "echo 'PermitRootLogin yes' > /etc/ssh/sshd_config.d/00-rootlogin.conf"
+        --run-command "echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config.d/00-rootlogin.conf"
         --run-command "subscription-manager register --force --username {{ vault_rh_user }} --password '{{ vault_rh_password }}'"
         --run-command "dnf update -y"
         --run-command "dnf install vim -y"
@@ -58,7 +65,7 @@
       ansible.builtin.pause:
         seconds: 60
 
-    # A leftover /etc/hosts entry makes ipCheck.sh print a hostname instead of an IP.
+    # Drop any old entry for this name so the add further down starts clean.
     - name: Remove stale /etc/hosts entry for the new VM
       ansible.builtin.lineinfile:
         path: /etc/hosts
@@ -91,8 +98,9 @@
       ansible.builtin.assert:
         that: vm_ip | length > 0
         fail_msg: >-
-          No numeric IP found for {{ vm_name }} in the ipCheck.sh output. If nmap reverse-resolved
-          the address to a hostname, check /etc/hosts on the KVM host for a stale entry for that address.
+          No numeric IP found for {{ vm_name }} in the ipCheck.sh output. Either the VM has no DHCP
+          lease yet, or ipCheck.sh printed a hostname because nmap reverse-resolved the address.
+          Make sure the nmap call in /home/tools/ipCheck.sh uses -n.
         quiet: true
 
     - name: Add new VM to /etc/hosts on kvm_host
@@ -119,35 +127,58 @@
         name: sshpass
         state: present
 
+    # The fixed pause above isn't a guarantee: don't bootstrap until sshd is actually answering.
+    - name: Wait for SSH on the new VM
+      ansible.builtin.wait_for:
+        host: "{{ vm_ip }}"
+        port: 22
+        search_regex: OpenSSH
+        timeout: 180
+
     # A reused DHCP address or rebuilt VM has a new host key. ssh refuses password auth when a
     # conflicting key is on file, even with StrictHostKeyChecking=no, so clear old entries first.
+    # loop_var is set because this role is run from a loop that already uses 'item'.
     - name: Remove stale host keys for the new VM
       ansible.builtin.known_hosts:
-        name: "{{ item.0 }}"
-        path: "{{ item.1 }}"
+        name: "{{ kh.0 }}"
+        path: "{{ kh.1 }}"
         state: absent
       loop: "{{ [vm_ip, vm_name] | product(['/root/.ssh/known_hosts', '/home/runner/.ssh/known_hosts']) | list }}"
+      loop_control:
+        loop_var: kh
 
+    # The password is passed via SSHPASS (sshpass -e) instead of on the command line, so a failure
+    # shows ssh's real error without exposing it. Don't add no_log here: it hides that error.
     - name: Bootstrap SSH trust to new VM
-      ansible.builtin.shell: >
-        sshpass -p 'redhat' ssh-copy-id
-        -i /home/runner/.ssh/id_rsa.pub
-        -o StrictHostKeyChecking=no
-        root@{{ vm_ip }}
-      no_log: true
+      ansible.builtin.command:
+        argv:
+          - sshpass
+          - "-e"
+          - ssh-copy-id
+          - "-i"
+          - /home/runner/.ssh/id_rsa.pub
+          - "-o"
+          - StrictHostKeyChecking=no
+          - "-o"
+          - ConnectTimeout=15
+          - "root@{{ vm_ip }}"
+      environment:
+        SSHPASS: "{{ vm_root_password | default('redhat') }}"
 
     - name: Inject AAP machine credential key into new VM
       ansible.posix.authorized_key:
         user: root
         state: present
-        key: "{{ item }}"
+        key: "{{ pubkey }}"
       loop:
         - "{{ kvm_host_root_pubkey }}"
         - "{{ aap_container_pubkey }}"
+      loop_control:
+        loop_var: pubkey
       delegate_to: "{{ vm_ip }}"
       vars:
         ansible_user: root
-        ansible_password: redhat
+        ansible_password: "{{ vm_root_password | default('redhat') }}"
         ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
 
     - name: Generate SSH key on localhost if not present
@@ -170,7 +201,7 @@
       delegate_to: "{{ vm_ip }}"
       vars:
         ansible_user: root
-        ansible_password: redhat
+        ansible_password: "{{ vm_root_password | default('redhat') }}"
         ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
 
   when: vm_check.rc != 0
