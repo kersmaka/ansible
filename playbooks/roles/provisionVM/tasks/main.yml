@@ -43,6 +43,9 @@
     # base image ships with. The 00- prefix makes sshd read it before any other drop-in, and sshd
     # uses the first value it sees for each option. Set vm_root_password (e.g. from the vault)
     # to override the default.
+    # --selinux-relabel must stay LAST. dnf runs inside the libguestfs appliance, which has no
+    # SELinux, so updated packages (openssh, systemd) land unlabeled. Without a relabel, sshd runs
+    # as kernel_t and drops every login with "sshd_selinux_copy_context: setcon failed".
     - name: Inject Configuration (Hostname, Root Login, Subscription, Updates)
       ansible.builtin.command: >
         virt-customize -a {{ dest_image }}
@@ -53,6 +56,7 @@
         --run-command "subscription-manager register --force --username {{ vault_rh_user }} --password '{{ vault_rh_password }}'"
         --run-command "dnf update -y"
         --run-command "dnf install vim -y"
+        --selinux-relabel
       no_log: true
 
     - name: Run virt-install
@@ -164,6 +168,13 @@
           - "root@{{ vm_ip }}"
       environment:
         SSHPASS: "{{ vm_root_password | default('redhat') }}"
+      # A freshly booted guest can still be restarting sshd or finishing first-boot work, which
+      # drops the connection mid-login. Retry those drops for up to 3 minutes, but stop at once
+      # on a real authentication failure so a bad password doesn't wait out the whole window.
+      register: ssh_bootstrap
+      retries: 18
+      delay: 10
+      until: ssh_bootstrap.rc == 0 or 'Permission denied' in (ssh_bootstrap.stderr | default(''))
 
     - name: Inject AAP machine credential key into new VM
       ansible.posix.authorized_key:
