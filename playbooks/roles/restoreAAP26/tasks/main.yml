@@ -5,7 +5,7 @@
   delegate_to: ansible.homelab.com
   become_user: aap
 
-- name: Ensure aap user exists on ansiblebackup2
+- name: "Ensure aap user exists on {{ target }}"
   ansible.builtin.user:
     name: aap
     state: present
@@ -19,7 +19,7 @@
     content: "aap ALL=(ALL) NOPASSWD:ALL\n"
     mode: '0440'
     validate: 'visudo -cf %s'
-  become: true    
+  become: true
 
 - name: Ensure required packages are installed on restore target
   ansible.builtin.package:
@@ -30,17 +30,18 @@
     state: present
   become: true
 
-- name: Inject ansible aap public key into ansiblebackup2 authorized_keys
+- name: "Inject ansible aap public key into {{ target }} authorized_keys"
   authorized_key:
     user: aap
     state: present
     key: "{{ ansible_aap_pubkey.content | b64decode }}"
 
-- name: Add ansiblebackup2 to /etc/hosts on ansible.homelab.com
+# Facts are gathered for the play host (target), so read the IP from hostvars[target].
+- name: "Add {{ target }} to /etc/hosts on ansible.homelab.com"
   lineinfile:
     path: /etc/hosts
-    line: "{{ hostvars['ansiblebackup2.homelab.com']['ansible_host'] | default(hostvars['ansiblebackup2.homelab.com']['ansible_default_ipv4']['address']) }} ansiblebackup2.homelab.com"
-    regexp: '.*ansiblebackup2\.homelab\.com.*'
+    line: "{{ hostvars[target]['ansible_host'] | default(hostvars[target]['ansible_default_ipv4']['address']) }} {{ target }}"
+    regexp: '.*{{ target | regex_escape }}.*'
     state: present
   become: true
   delegate_to: ansible.homelab.com
@@ -54,7 +55,7 @@
   args:
     executable: /bin/bash
 
-- name: SCP backup from ansible to ansiblebackup2
+- name: "SCP backup from ansible to {{ target }}"
   delegate_to: ansible.homelab.com
   become_user: aap
   shell: >
@@ -63,7 +64,7 @@
     -o BatchMode=yes
     -o ConnectTimeout=30
     /home/aap/aap-backup-manual.tar.gz
-    aap@ansiblebackup2.homelab.com:/home/aap/aap-backup-manual.tar.gz
+    aap@{{ target }}:/home/aap/aap-backup-manual.tar.gz
   args:
     executable: /bin/bash
   async: 3600
@@ -92,10 +93,13 @@
   ansible.builtin.shell: |
     for file in *ansible.homelab.com*; do
       [ -e "$file" ] || continue
-      mv "$file" "${file//ansible.homelab.com/ansiblebackup2.homelab.com}"
+      mv "$file" "${file//ansible.homelab.com/$TARGET_HOST}"
     done
   args:
+    executable: /bin/bash
     chdir: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-7-x86_64/backups/
+  environment:
+    TARGET_HOST: "{{ target }}"
 
 # ── 3. Enable lingering for aap user ───────────────────────────────────────
 - name: Enable lingering for aap user
@@ -110,7 +114,7 @@
 - name: Sync bundle scaffolding (ansible.cfg, inventory, collections) to restore target
   ansible.posix.synchronize:
     src: "/home/aap/{{ aap_bundle_dir }}/"
-    dest: "aap@ansiblebackup2.homelab.com:/home/aap/{{ aap_bundle_dir }}/"
+    dest: "aap@{{ target }}:/home/aap/{{ aap_bundle_dir }}/"
     rsync_opts:
       - "--exclude=backups"
   become: false
@@ -120,12 +124,12 @@
   ansible.builtin.replace:
     path: /home/aap/{{ aap_bundle_dir }}/inventory
     regexp: 'ansible\.homelab\.com'
-    replace: 'ansiblebackup2.homelab.com'
+    replace: "{{ target }}"
 
 - name: Sync SSL directory to restore target
   ansible.posix.synchronize:
     src: "/home/aap/ssl/"
-    dest: "aap@ansiblebackup2.homelab.com:/home/aap/ssl/"
+    dest: "aap@{{ target }}:/home/aap/ssl/"
   become: false
   delegate_to: ansible.homelab.com
 
