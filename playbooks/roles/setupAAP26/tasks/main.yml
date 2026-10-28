@@ -44,7 +44,7 @@
     creates: /root/.ssh/id_rsa
   delegate_to: localhost
 
-- name: Copy SSH public key to ansiblebackup2 for multiple users
+- name: Copy SSH public key to ansible-dev for multiple users
   ansible.posix.authorized_key:
     user: "{{ ssh_user }}"
     state: present
@@ -69,7 +69,7 @@
     cmd: "scp -P 2732 -o StrictHostKeyChecking=no root@192.168.0.249:{{ scp_item.src }} {{ scp_item.dest }}"
     creates: "{{ scp_item.dest }}"
   loop:
-    - { src: '/mnt/storage/ansible/aapVersions/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64.tar.gz', dest: '/home/aap/setup/aap_bundle.tar.gz' }
+    - { src: '/mnt/storage/ansible/aapVersions/ansible-automation-platform-containerized-setup-bundle-2.6-7-x86_64.tar.gz', dest: '/home/aap/setup/aap_bundle.tar.gz' }
     - { src: '/home/ansible/ansibleInventory/inventory', dest: '/home/aap/setup/inventory' }
   loop_control:
     loop_var: scp_item
@@ -85,16 +85,16 @@
     group: aap
 
 # 5. /etc/hosts
-- name: Remove stale ansiblebackup2 entry from /etc/hosts
+- name: Remove stale ansible-dev entry from /etc/hosts
   ansible.builtin.lineinfile:
     path: /etc/hosts
-    regexp: '.*ansiblebackup2.*'
+    regexp: '.*ansible-dev.*'
     state: absent
 
-- name: Add ansiblebackup2 entry to /etc/hosts
+- name: Add ansible-dev entry to /etc/hosts
   ansible.builtin.lineinfile:
     path: /etc/hosts
-    line: "{{ ansible_default_ipv4.address }} ansiblebackup2.homelab.com ansiblebackup2"
+    line: "{{ ansible_default_ipv4.address }} ansible-dev.homelab.com ansible-dev"
     state: present
 
 # install AAP 26
@@ -118,7 +118,7 @@
 - name: Execute Containerized Installer
   shell: ansible-playbook -i /home/aap/setup/inventory ansible.containerized_installer.install
   args:
-    chdir: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-5-x86_64
+    chdir: /home/aap/ansible-automation-platform-containerized-setup-bundle-2.6-7-x86_64
   become: true
   become_user: aap
   environment:
