@@ -34,6 +34,14 @@
           ({{ source_image }}). Name the image rhel-<major>.<minor>-..., e.g. rhel-9.4-x86_64-kvm.qcow2.
         quiet: true
 
+    - name: Verify vm_selinux_mode is supported
+      ansible.builtin.assert:
+        that: (vm_selinux_mode | default('permissive')) in ['permissive', 'disabled']
+        fail_msg: >-
+          vm_selinux_mode must be 'permissive' or 'disabled' (got '{{ vm_selinux_mode | default('permissive') }}').
+          Enforcing needs a working image relabel, which this build can't do.
+        quiet: true
+
     - name: Copy qcow2 image
       ansible.builtin.copy:
         src: "{{ source_image }}"
@@ -58,9 +66,12 @@
     # base image ships with. The 00- prefix makes sshd read it before any other drop-in, and sshd
     # uses the first value it sees for each option. Set vm_root_password (e.g. from the vault)
     # to override the default.
-    # --selinux-relabel must stay LAST. dnf runs inside the libguestfs appliance, which has no
-    # SELinux, so updated packages (openssh, systemd) land unlabeled. Without a relabel, sshd runs
-    # as kernel_t and drops every login with "sshd_selinux_copy_context: setcon failed".
+    # SELinux is set to permissive (or disabled) on purpose. dnf runs inside the libguestfs
+    # appliance, which has no SELinux, so updated packages (openssh, systemd) land unlabeled, and
+    # libguestfs on this KVM host only leaves a /.autorelabel note instead of relabelling. The RHEL
+    # 9.4 guest then crashes on that note (selinux-autorelabel-generator SEGV), so nothing is ever
+    # relabelled and an enforcing sshd runs as kernel_t and drops every login ("setcon failed").
+    # Don't add --selinux-relabel back unless the host can really relabel (policycoreutils).
     - name: Inject Configuration (Hostname, Root Login, Subscription, Updates)
       ansible.builtin.command: >
         virt-customize -a {{ dest_image }}
@@ -72,7 +83,7 @@
         --run-command "subscription-manager release --set={{ rhel_release }}"
         --run-command "dnf update -y"
         --run-command "dnf install vim -y"
-        --selinux-relabel
+        --run-command "sed -i 's/^SELINUX=.*/SELINUX={{ vm_selinux_mode | default('permissive') }}/' /etc/selinux/config"
       no_log: true
 
     - name: Run virt-install
